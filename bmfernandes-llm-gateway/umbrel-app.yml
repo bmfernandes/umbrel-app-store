@@ -1,0 +1,36 @@
+# Manifesto Umbrel Community App do LLM Gateway (TASK_V21/V23). Só metadados públicos aqui —
+# código-fonte e imagem seguem privados (repo llm-gateway + GHCR).
+manifestVersion: 1
+id: bmfernandes-llm-gateway
+name: LLM Gateway
+tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
+icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
+category: Developer Tools
+# Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
+version: "0.8.1"
+# Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
+# O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
+# AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
+port: 8004
+# A UI abre direto no dashboard admin read-only (co-servido pelo gateway, não é processo à parte).
+path: "/dashboard"
+description: >-
+  Gateway de inferência de texto do homelab, compatível com a API OpenAI. Roteia por uma
+  escada de tiers de qualidade que só desce (Groq em produção, Ollama como piso; Gemini,
+  GPT-OSS e Claude como premium opt-in via pontes host-side). Inclui um dashboard de status
+  admin read-only (saúde por tier, métricas e últimas requisições) e log de requisições
+  durável para análise de uso. Os provedores reais ficam ocultos da API cliente (model:"gateway").
+developer: BMFERNANDES
+website: https://github.com/bmfernandes/llm-gateway
+submitter: BMFERNANDES
+repo: https://github.com/bmfernandes/llm-gateway
+support: https://github.com/bmfernandes/llm-gateway/issues
+gallery: []
+releaseNotes: >-
+  v0.8.1 — hotfix de disponibilidade (Groq/tradução de exceções httpx; ponte Claude/marcadores
+  de auth) + imagem publicada automaticamente no GHCR a cada release.
+# Sem dependências de outros apps Umbrel: Ollama (server) e as pontes agy/claude são host-side,
+# alcançados por Tailscale / host.docker.internal — não são apps do Umbrel.
+dependencies: []
+defaultUsername: ""
+defaultPassword: ""

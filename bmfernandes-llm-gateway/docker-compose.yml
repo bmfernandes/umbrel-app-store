@@ -1,0 +1,42 @@
+# docker-compose do app Umbrel (TASK_V21/V23). app_proxy do framework Umbrel + serviço `web`
+# (o gateway) — o gateway NÃO publica porta no host; o app_proxy é a única superfície exposta.
+version: "3.7"
+
+services:
+  # Proxy reverso do framework Umbrel: publica a `port:` do manifesto e repassa para o gateway.
+  # É ele que faz o ícone do dashboard abrir. APP_HOST = <id-completo-do-app>_<service>_1.
+  app_proxy:
+    environment:
+      APP_HOST: bmfernandes-llm-gateway_web_1
+      APP_PORT: 8800
+      # A API /v1 é consumida por máquinas (sem login de navegador) — desligar a auth do proxy
+      # para não quebrar os clientes. A proteção de acesso vem da rede (Tailscale).
+      PROXY_AUTH_ADD: "false"
+
+  web:
+    # Imagem PRIVADA publicada automaticamente pelo CI (GHCR) a cada tag vX.Y.Z. O Umbrel
+    # precisa estar autenticado no GHCR (docker login) para puxar — ver README da store.
+    image: ghcr.io/bmfernandes/llm-gateway:0.8.1
+    restart: on-failure
+    stop_grace_period: 1m
+    # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # No arranjo TASK_V17 a GPU/mídia vive no ubuntu-server; o Beelink não arbitra GPU local.
+      - ARBITER_ENABLED=false
+      # Ollama do ubuntu-server via Tailscale (tier low).
+      - OLLAMA_URL=${OLLAMA_URL:-http://100.x.y.z:11434}
+      # Pontes host-side no próprio Beelink (Gemini/GPT-OSS via agy; Claude).
+      - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://host.docker.internal:8802}
+      - CLAUDE_BRIDGE_URL=${CLAUDE_BRIDGE_URL:-http://host.docker.internal:8803}
+      # Segredos providos pelo framework Umbrel (exports.sh / ${APP_SEED}) — NUNCA hardcode aqui.
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GATEWAY_SECRETS=${GATEWAY_SECRETS}
+      - ANTIGRAVITY_BRIDGE_TOKEN=${ANTIGRAVITY_BRIDGE_TOKEN}
+      - CLAUDE_BRIDGE_TOKEN=${CLAUDE_BRIDGE_TOKEN}
+      - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-llm-gateway}
+      - USAGE_LOG_DIR=/gateway/usage
+    volumes:
+      # Log de portaria durável no storage do app (fora do container).
+      - ${APP_DATA_DIR}/data/usage:/gateway/usage
