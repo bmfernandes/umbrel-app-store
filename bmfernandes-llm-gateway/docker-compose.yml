@@ -16,7 +16,7 @@ services:
   web:
     # Imagem PRIVADA publicada automaticamente pelo CI (GHCR) a cada tag vX.Y.Z. O Umbrel
     # precisa estar autenticado no GHCR (docker login) para puxar — ver README da store.
-    image: ghcr.io/bmfernandes/llm-gateway:0.8.1
+    image: ghcr.io/bmfernandes/llm-gateway:0.9.0
     restart: on-failure
     stop_grace_period: 1m
     # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).
@@ -30,7 +30,13 @@ services:
       # Pontes host-side no próprio Beelink (Gemini/GPT-OSS via agy; Claude).
       - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://host.docker.internal:8802}
       - CLAUDE_BRIDGE_URL=${CLAUDE_BRIDGE_URL:-http://host.docker.internal:8803}
-      # Segredos providos pelo framework Umbrel (exports.sh / ${APP_SEED}) — NUNCA hardcode aqui.
+      # Segredos: o instalador do Umbrel (Community App Store) NÃO tem formulário de env
+      # vars (confirmado por leitura de código — `docker-pull.ts` do `umbreld` usa dockerode
+      # puro, e o mecanismo nativo `exports.sh` depende de estado interno do processo
+      # `umbreld`, não replicável para apps de terceiros — TASK_V23, Frente 4e). Ficam vazios
+      # aqui de propósito: o gateway sobe mesmo assim e serve `/setup` (HTTP Basic Auth, 1º
+      # acesso cria a conta) para configurá-los, persistidos no volume `/gateway/config` abaixo.
+      # NUNCA hardcode valor real aqui.
       - GROQ_API_KEY=${GROQ_API_KEY}
       - GATEWAY_SECRETS=${GATEWAY_SECRETS}
       - ANTIGRAVITY_BRIDGE_TOKEN=${ANTIGRAVITY_BRIDGE_TOKEN}
@@ -40,3 +46,6 @@ services:
     volumes:
       # Log de portaria durável no storage do app (fora do container).
       - ${APP_DATA_DIR}/data/usage:/gateway/usage
+      # Segredos configurados via /setup (TASK_V23, Frente 4e) — persistidos fora do
+      # container, sobrevivem a updates/recriação.
+      - ${APP_DATA_DIR}/data/config:/gateway/config

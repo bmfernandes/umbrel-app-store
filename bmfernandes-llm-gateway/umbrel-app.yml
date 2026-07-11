@@ -7,7 +7,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.8.1"
+version: "0.9.0"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -27,8 +27,10 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.8.1 — hotfix de disponibilidade (Groq/tradução de exceções httpx; ponte Claude/marcadores
-  de auth) + imagem publicada automaticamente no GHCR a cada release.
+  v0.9.0 — setup wizard de segredos (tela "/setup" no próprio app): configure
+  GATEWAY_SECRETS/GROQ_API_KEY/tokens de ponte direto pela UI no 1º acesso, sem precisar de
+  variáveis de ambiente (o instalador do Umbrel não tem esse formulário). 1º acesso cria a conta
+  de administrador; acessos seguintes exigem usuário/senha.
 # Sem dependências de outros apps Umbrel: Ollama (server) e as pontes agy/claude são host-side,
 # alcançados por Tailscale / host.docker.internal — não são apps do Umbrel.
 dependencies: []
