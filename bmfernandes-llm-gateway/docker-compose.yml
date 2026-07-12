@@ -18,7 +18,7 @@ services:
     # (loopback) porque o pull acontece no MESMO host onde o registry roda — Docker trata
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
     # do umbrelOS. Publicacao via /publicar-imagem, manual, apos CI verde + tag.
-    image: 127.0.0.1:8801/llm-gateway:v0.9.6
+    image: 127.0.0.1:8801/llm-gateway:v0.9.7
     restart: on-failure
     stop_grace_period: 1m
     # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).
@@ -27,8 +27,12 @@ services:
     environment:
       # No arranjo TASK_V17 a GPU/mídia vive no ubuntu-server; o Beelink não arbitra GPU local.
       - ARBITER_ENABLED=false
-      # Ollama do ubuntu-server via Tailscale (tier low).
-      - OLLAMA_URL=${OLLAMA_URL:-http://100.x.y.z:11434}
+      # Ollama do ubuntu-server via Tailscale (tier low) — configurado via /setup (mesmo
+      # motivo dos segredos abaixo: sem default fixo aqui, senão o fallback do arquivo
+      # persistido nunca entraria em ação). Achado real (TASK_V26): um placeholder fixo
+      # (`100.x.y.z`) nunca era substituível pelo fluxo normal do Umbrel — ficava travado
+      # para sempre, e o tier `low` nunca funcionava de fato.
+      - OLLAMA_URL=${OLLAMA_URL}
       # Pontes host-side no próprio Beelink (Gemini/GPT-OSS via agy; Claude).
       - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://host.docker.internal:8802}
       - CLAUDE_BRIDGE_URL=${CLAUDE_BRIDGE_URL:-http://host.docker.internal:8803}
