@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.9.3"
+version: "0.9.4"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,8 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.9.3 — botão "Setup" na navegação do dashboard, ao lado de "Dashboard"/"JSON": antes o único
+  v0.9.4 — /setup vira dois passos: primeiro cria só a conta de administrador, depois (já
+  autenticado) abre a tela de segredos. v0.9.3 — botão "Setup" na navegação do dashboard, ao lado de "Dashboard"/"JSON": antes o único
   jeito de chegar em /setup era digitar a URL manualmente. v0.9.2 — imagem passa a ser publicada
   num registry Docker privado no próprio Beelink em vez do GHCR (TASK_V26): o botão "Update" volta
   a funcionar sozinho, sem 401 nem recriação manual de container. Corrige também a hora exibida no
