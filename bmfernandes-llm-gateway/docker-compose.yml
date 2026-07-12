@@ -14,9 +14,11 @@ services:
       PROXY_AUTH_ADD: "false"
 
   web:
-    # Imagem PRIVADA publicada automaticamente pelo CI (GHCR) a cada tag vX.Y.Z. O Umbrel
-    # precisa estar autenticado no GHCR (docker login) para puxar — ver README da store.
-    image: ghcr.io/bmfernandes/llm-gateway:0.9.0
+    # Registry Docker privado no proprio Beelink (TASK_V26), nao mais GHCR. 127.0.0.1
+    # (loopback) porque o pull acontece no MESMO host onde o registry roda — Docker trata
+    # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
+    # do umbrelOS. Publicacao via /publicar-imagem, manual, apos CI verde + tag.
+    image: 127.0.0.1:8801/llm-gateway:v0.9.2
     restart: on-failure
     stop_grace_period: 1m
     # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).

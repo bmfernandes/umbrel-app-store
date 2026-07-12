@@ -15,6 +15,7 @@ https://github.com/bmfernandes/umbrel-app-store
 ## Apps
 
 - **`bmfernandes-llm-gateway`** — [LLM Gateway](https://github.com/bmfernandes/llm-gateway):
-  inference-broker OpenAI-compatible do homelab. Imagem **privada** (GHCR) — o Umbrel precisa
-  estar autenticado no registry para instalar/atualizar (`docker login ghcr.io`, token
-  `read:packages`).
+  inference-broker OpenAI-compatible do homelab. Imagem publicada num **registry Docker privado
+  rodando no próprio Beelink** (não mais GHCR — TASK_V26), referenciada por `127.0.0.1` (loopback,
+  já que o pull acontece no mesmo host que roda o registry) — sem autenticação necessária para
+  instalar/atualizar.
