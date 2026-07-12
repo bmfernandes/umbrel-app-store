@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.9.9"
+version: "0.9.10"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,8 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.9.9 — número da versão do app aparece ao lado do nome no dashboard; gráfico de
+  v0.9.10 — coluna "Falhas" na tabela de tiers do dashboard, entre "Sucessos" e "Estado"
+  (contagem de fallback por tier). v0.9.9 — número da versão do app aparece ao lado do nome no dashboard; gráfico de
   latência das últimas requisições (mínimo/média/máximo) acima do painel de tiers;
   script `bridge/test-tiers.sh` para testar os 6 tiers manualmente. Infra: linger
   reabilitado para o usuário do Beelink (pontes agy/Claude caíam junto ao fim de toda
