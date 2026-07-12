@@ -18,12 +18,22 @@ services:
     # (loopback) porque o pull acontece no MESMO host onde o registry roda — Docker trata
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
     # do umbrelOS. Publicacao via /publicar-imagem, manual, apos CI verde + tag.
-    image: 127.0.0.1:8801/llm-gateway:v0.9.7
+    image: 127.0.0.1:8801/llm-gateway:v0.9.8
     restart: on-failure
     stop_grace_period: 1m
     # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Achado real (2026-07-12): o container não herda a resolução MagicDNS do host por
+    # padrão (gotcha comum de Docker + Tailscale) — hostname de outra máquina da tailnet
+    # (ex.: OLLAMA_URL apontando pro `ubuntu-server`) não resolvia de dentro do container,
+    # mesmo com a rede saudável. 100.100.100.100 (DNS do próprio Tailscale) primeiro,
+    # resolver público como respaldo (nunca só o do Tailscale — não é garantido que ele
+    # encaminhe consultas fora da tailnet, ex.: api.groq.com, quando chamado de dentro
+    # de um container isolado assim).
+    dns:
+      - 100.100.100.100
+      - 1.1.1.1
     environment:
       # No arranjo TASK_V17 a GPU/mídia vive no ubuntu-server; o Beelink não arbitra GPU local.
       - ARBITER_ENABLED=false

@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.9.7"
+version: "0.9.8"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,9 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.9.7 — OLLAMA_URL vira campo configurável no /setup (tier low finalmente funciona em
+  v0.9.8 — corrige resolução de hostname Tailscale de dentro do container (DNS explícito),
+  destravando o tier low de vez; rótulo "Groq" no dashboard vira "Groq (via api)". v0.9.7 —
+  OLLAMA_URL vira campo configurável no /setup (tier low finalmente funciona em
   produção — antes ficava preso num placeholder fixo). v0.9.6 — tela de segredos do /setup
   pré-preenche o que já está salvo (chaves/tokens
   mascarados, últimos 4 caracteres reais) com ícone de status por campo. v0.9.5 — login do
