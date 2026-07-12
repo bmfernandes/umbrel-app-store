@@ -18,7 +18,7 @@ services:
     # (loopback) porque o pull acontece no MESMO host onde o registry roda — Docker trata
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
     # do umbrelOS. Publicacao via /publicar-imagem, manual, apos CI verde + tag.
-    image: 127.0.0.1:8801/llm-gateway:v0.9.5
+    image: 127.0.0.1:8801/llm-gateway:v0.9.6
     restart: on-failure
     stop_grace_period: 1m
     # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).
@@ -36,8 +36,9 @@ services:
       # vars (confirmado por leitura de código — `docker-pull.ts` do `umbreld` usa dockerode
       # puro, e o mecanismo nativo `exports.sh` depende de estado interno do processo
       # `umbreld`, não replicável para apps de terceiros — TASK_V23, Frente 4e). Ficam vazios
-      # aqui de propósito: o gateway sobe mesmo assim e serve `/setup` (HTTP Basic Auth, 1º
-      # acesso cria a conta) para configurá-los, persistidos no volume `/gateway/config` abaixo.
+      # aqui de propósito: o gateway sobe mesmo assim e serve `/setup` (1º acesso cria a conta,
+      # login por formulário próprio depois) para configurá-los, persistidos no volume
+      # `/gateway/config` abaixo.
       # NUNCA hardcode valor real aqui.
       - GROQ_API_KEY=${GROQ_API_KEY}
       - GATEWAY_SECRETS=${GATEWAY_SECRETS}
