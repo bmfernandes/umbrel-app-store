@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.9.12"
+version: "0.9.13"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,9 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.9.12 — corrige os tiers ultra/super/max (Gemini Pro, Gemini Flash, GPT-OSS), que devolviam
+  v0.9.13 — tiers que dependem de pontes externas (Gemini, GPT-OSS, Claude) falhavam rápido só às
+  vezes: um travamento de rede podia segurar a requisição por vários minutos antes de desistir.
+  Agora falha em no máximo ~1min30s por tier antes de repassar adiante. v0.9.12 — corrige os tiers ultra/super/max (Gemini Pro, Gemini Flash, GPT-OSS), que devolviam
   erro de indisponibilidade: o catálogo do motor Gemini/GPT-OSS passou a exigir uma variante de
   qualidade explícita no modelo, e os identificadores antigos deixaram de existir. v0.9.11 — card "Requisições HTTP" do dashboard passa a contar só as rotas de cliente
   (`/v1/*`), sem inflar com o próprio acesso ao dashboard/métricas; resubmissão idêntica de
