@@ -1,29 +1,84 @@
-# docker-compose do app Umbrel (TASK_V21/V23). app_proxy do framework Umbrel + serviço `web`
-# (o gateway) — o gateway NÃO publica porta no host; o app_proxy é a única superfície exposta.
+# docker-compose do app Umbrel (TASK_V21, Frente 1). Aqui entra o app_proxy do framework
+# Umbrel e o gateway NÃO publica porta no host — o app_proxy é a única superfície exposta
+# (critério de aceite da Frente 1).
+#
+# DECISÃO: usar IMAGEM PUBLICADA, não `build:`. O app instalado no Umbrel vive em
+# ~/umbrel/app-data/llm-gateway/ e NÃO tem o código-fonte/Dockerfile, então `build:` local não
+# é o fluxo natural do Umbrel. A imagem vem do registry Docker privado no próprio Beelink
+# (TASK_V26), não mais do GHCR — ver decisão completa em umbrel/README.md.
 version: "3.7"
 
+# `umbrel_main_network` é a rede compartilhada que o proprio `umbreld` usa para o `app_proxy`
+# de QUALQUER app alcancar o servico `web` correspondente — achado ao vivo na validacao da
+# TASK_V27: ao subir o compose manualmente (fora do fluxo oficial de instalacao/update do
+# umbreld), o `web` ficava isolado numa rede de projeto nova, sem conexao com o `app_proxy`
+# (ja em pe ha 19h nessa rede compartilhada) — dashboard respondia 502. Declarar aqui como
+# `external` + anexar o `web` a ela reproduz o que o umbreld faz por fora, sem depender do
+# fluxo de instalacao oficial (necessario para validar via /publicar-imagem + deploy manual).
+networks:
+  default: {}
+  umbrel_main_network:
+    external: true
+
 services:
+  # Registry Docker privado (TASK_V26), dobrado para dentro deste compose (Emenda TASK_V26,
+  # 2026-07-25): como stack standalone, o container era varrido pela rotina "Cleaning up old
+  # containers" do umbreld a cada boot (a rede `llm-gateway-registry_default` não pertencia a
+  # nenhum app reconhecido) e nunca voltava — restart:unless-stopped nunca chegava a atuar
+  # porque o container já não existia mais quando o Docker ficava disponível de novo. Como
+  # serviço DESTE compose, herda a recriação pós-boot que o umbreld já dá aos demais serviços.
+  # SEM depends_on: web/bridges dependem do registry só em tempo de PULL, feito pelo daemon do
+  # HOST (fora da rede do compose) contra 127.0.0.1:8801 — nunca em runtime de container, e o
+  # registry do ciclo anterior já está de pé nesse instante (depends_on gateia start de
+  # container, nao pull de imagem, entao nao resolveria nada e criaria acoplamento falso).
+  # Binds/volume mantidos verbatim do registry-compose.yml standalone anterior (bridge/legacy/)
+  # — bind de host (nao volume nomeado), reusa as imagens ja publicadas sem migracao.
+  # REGRA DE RELEASE (ver umbrel/README.md): nunca alterar a definicao deste servico na MESMA
+  # release que bumpa as tags de web/agy_bridge/claude_bridge — abriria uma janela de pull sem
+  # nenhum registry de pe.
+  registry:
+    image: registry:2
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      - REGISTRY_STORAGE_DELETE_ENABLED=false
+    ports:
+      - "127.0.0.1:8801:5000"
+      - "100.118.51.31:8801:5000"
+    volumes:
+      - /home/umbrel/registry-data:/var/lib/registry
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # Proxy reverso do framework Umbrel: publica a `port:` do manifesto e repassa para o gateway.
-  # É ele que faz o ícone do dashboard abrir. APP_HOST = <id-completo-do-app>_<service>_1.
+  # É ele que faz o ícone do dashboard abrir. APP_HOST = nome do serviço do gateway; APP_PORT = 8800.
   app_proxy:
     environment:
+      # APP_HOST = <id-completo-do-app>_<service>_1 (id inclui o prefixo da store, TASK_V23)
       APP_HOST: bmfernandes-llm-gateway_web_1
       APP_PORT: 8800
       # A API /v1 é consumida por máquinas (sem login de navegador) — desligar a auth do proxy
-      # para não quebrar os clientes. A proteção de acesso vem da rede (Tailscale).
+      # para não quebrar os clientes. A proteção de acesso vem da rede (Tailscale). Ver README.
       PROXY_AUTH_ADD: "false"
 
   web:
     # Registry Docker privado no proprio Beelink (TASK_V26), nao mais GHCR. 127.0.0.1
     # (loopback) porque o pull acontece no MESMO host onde o registry roda — Docker trata
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
-    # do umbrelOS. Publicacao via /publicar-imagem, manual, apos CI verde + tag.
-    image: 127.0.0.1:8801/llm-gateway:v0.9.13
+    # do umbrelOS (o achado da TASK_V23 era sobre credencial, nao TLS). Publicacao via
+    # /publicar-imagem (TASK_V05), manual, apos CI verde + tag. Trocar a tag a cada release.
+    image: 127.0.0.1:8801/llm-gateway:v0.10.1
     restart: on-failure
     stop_grace_period: 1m
-    # host.docker.internal → host do Beelink, para alcançar as pontes host-side (antigravity 8802 / claude 8803).
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      agy_bridge:
+        condition: service_healthy
+      claude_bridge:
+        condition: service_healthy
     # Achado real (2026-07-12): o container não herda a resolução MagicDNS do host por
     # padrão (gotcha comum de Docker + Tailscale) — hostname de outra máquina da tailnet
     # (ex.: OLLAMA_URL apontando pro `ubuntu-server`) não resolvia de dentro do container,
@@ -43,17 +98,17 @@ services:
       # (`100.x.y.z`) nunca era substituível pelo fluxo normal do Umbrel — ficava travado
       # para sempre, e o tier `low` nunca funcionava de fato.
       - OLLAMA_URL=${OLLAMA_URL}
-      # Pontes host-side no próprio Beelink (Gemini/GPT-OSS via agy; Claude).
-      - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://host.docker.internal:8802}
-      - CLAUDE_BRIDGE_URL=${CLAUDE_BRIDGE_URL:-http://host.docker.internal:8803}
+      # Pontes containerizadas (TASK_V27, reverte parcialmente a TASK_V05): serviços na
+      # mesma rede do compose, endereçados por nome — não mais host.docker.internal.
+      - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://agy_bridge:8802}
+      - CLAUDE_BRIDGE_URL=${CLAUDE_BRIDGE_URL:-http://claude_bridge:8803}
       # Segredos: o instalador do Umbrel (Community App Store) NÃO tem formulário de env
-      # vars (confirmado por leitura de código — `docker-pull.ts` do `umbreld` usa dockerode
-      # puro, e o mecanismo nativo `exports.sh` depende de estado interno do processo
-      # `umbreld`, não replicável para apps de terceiros — TASK_V23, Frente 4e). Ficam vazios
-      # aqui de propósito: o gateway sobe mesmo assim e serve `/setup` (1º acesso cria a conta,
-      # login por formulário próprio depois) para configurá-los, persistidos no volume
-      # `/gateway/config` abaixo.
-      # NUNCA hardcode valor real aqui.
+      # vars (confirmado por leitura de código — `docker-pull.ts` do `umbreld` usa
+      # dockerode puro, e o mecanismo nativo `exports.sh` depende de estado interno do
+      # processo `umbreld`, não replicável para apps de terceiros — TASK_V23, Frente 4e).
+      # Ficam vazios aqui de propósito: o gateway sobe mesmo assim e serve `/setup`
+      # (1º acesso cria a conta, login por formulário próprio depois) para configurá-los,
+      # persistidos no volume `/gateway/config` abaixo. NUNCA hardcode valor real aqui.
       - GROQ_API_KEY=${GROQ_API_KEY}
       - GATEWAY_SECRETS=${GATEWAY_SECRETS}
       - ANTIGRAVITY_BRIDGE_TOKEN=${ANTIGRAVITY_BRIDGE_TOKEN}
@@ -66,3 +121,99 @@ services:
       # Segredos configurados via /setup (TASK_V23, Frente 4e) — persistidos fora do
       # container, sobrevivem a updates/recriação.
       - ${APP_DATA_DIR}/data/config:/gateway/config
+    networks:
+      - default
+      - umbrel_main_network
+
+  # Pontes host-side containerizadas (TASK_V27). Reverte parcialmente a TASK_V05 (que as
+  # mantinha como systemd --user no host): o achado de que os CLIs claude/agy autenticam
+  # via token-file (não keyring/D-Bus) tornou a containerização viável — validado ao vivo
+  # (auth real bem-sucedida num container debian:bookworm-slim não-privilegiado). Isso
+  # também resolve o problema estrutural da sessão 2026-07-16/17: a OS do Beelink (Rugix,
+  # overlay root efêmero) apaga qualquer coisa em /etc/systemd a cada boot — as pontes como
+  # systemd --user paravam de existir sem sessão SSH ativa (linger não sobrevive a reboot).
+  # Como containers do próprio app (definição vive em /home, comprovadamente persistente e
+  # subida automaticamente pelo umbreld), a recuperação pós-reboot passa a ser autônoma.
+  agy_bridge:
+    image: 127.0.0.1:8801/llm-gateway-bridges:v0.10.1
+    command: ["uvicorn", "antigravity_bridge:app", "--host", "0.0.0.0", "--port", "8802"]
+    # uvicorn roda como PID 1 do container e nao reaproveita (reap) processos zumbis dos
+    # subprocessos agy que ele lanca — achado do /code-review. `init: true` usa o tini do
+    # Docker como PID 1 real, resolvendo isso sem mudar o entrypoint.
+    init: true
+    restart: on-failure
+    environment:
+      - ANTIGRAVITY_BRIDGE_TOKEN=${ANTIGRAVITY_BRIDGE_TOKEN}
+      # Default do antigravity_bridge.py é ~/.local/bin/agy (expande pra /root/... como
+      # root no container); explicitar evita depender de expansão implícita de $HOME.
+      - AGY_BIN=/usr/local/bin/agy
+    volumes:
+      # Path REAL do home do usuario umbrel (/home/umbrel/...), NAO ${UMBREL_ROOT}/home/
+      # (achado ao vivo, TASK_V27: sao diretorios DIFERENTES — ${UMBREL_ROOT}/home/ e uma
+      # arvore separada do proprio framework Umbrel, ex. Downloads dos apps; nao tem
+      # .gemini/.claude. Confirmado via stat: inodes diferentes). Diretório inteiro (nunca
+      # arquivo isolado): o agy reescreve o token via padrão atômico temp+rename, que troca
+      # o inode — um bind-mount de arquivo único fica preso ao inode antigo e nunca vê o
+      # refresh. Read-write: obrigatório pro refresh persistir (achado ao vivo, TASK_V27).
+      - /home/umbrel/.gemini:/root/.gemini
+      # Binário nativo (ELF, sem Node) do host — read-only.
+      - /home/umbrel/.local/bin/agy:/usr/local/bin/agy:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8802/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  claude_bridge:
+    image: 127.0.0.1:8801/llm-gateway-bridges:v0.10.1
+    command: ["uvicorn", "claude_bridge:app", "--host", "0.0.0.0", "--port", "8803"]
+    # Mesma ressalva do agy_bridge acima: init: true evita zumbis dos subprocessos claude.
+    init: true
+    restart: on-failure
+    environment:
+      - CLAUDE_BRIDGE_TOKEN=${CLAUDE_BRIDGE_TOKEN}
+      - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-llm-gateway}
+      # Mesma ressalva do agy_bridge: default do claude_bridge.py é ~/.local/bin/claude.
+      - CLAUDE_BIN=/usr/local/bin/claude
+    volumes:
+      # Path real do home do usuario umbrel — mesma ressalva do agy_bridge acima.
+      - /home/umbrel/.claude:/root/.claude
+      # Achado ao vivo na validacao da TASK_V27: o CLI `claude` guarda config/estado em
+      # `~/.claude.json`, um ARQUIVO IRMAO do diretorio `.claude/` (nao fica dentro dele) —
+      # sem esse bind-mount o CLI falha com "Claude configuration file not found at:
+      # /root/.claude.json" e a chamada nunca sai do estado "Not logged in". Mesma ressalva
+      # de rename atomico do `.credentials.json`/token-file do agy pode se aplicar aqui
+      # (nao confirmado se este arquivo especifico e reescrito via temp+rename) — se o
+      # refresh de sessao futuramente parar de persistir, e o primeiro lugar a investigar.
+      - /home/umbrel/.claude.json:/root/.claude.json
+      - /home/umbrel/.local/bin/claude:/usr/local/bin/claude:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8803/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Único container privilegiado do desenho (TASK_V27) — isolado de propósito das pontes,
+  # que continuam sem privilégio algum. Reaplica o fix de mDNS (TASK_V28) no host a cada
+  # boot, via `nsenter` no namespace do host (`pid: host`). Roda uma vez e sai (restart:
+  # "no"): não precisa ficar residente, só corrigir a config antes que algo dependa de
+  # `umbrel.local` resolver.
+  net_bootstrap:
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap:v0.10.1
+    pid: host
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - SYS_CHROOT
+    # cap_add sozinho NAO basta para nsenter --mount: o perfil AppArmor padrao do Docker
+    # (docker-default) bloqueia mount() mesmo com SYS_ADMIN presente — achado ao vivo na
+    # validacao da TASK_V27 (container morria com exit 1 e ZERO log, sem nenhuma mensagem
+    # de erro visivel, porque o AppArmor mata a chamada antes do nsenter conseguir escrever
+    # no stderr). Camada de seguranca separada das capabilities Linux.
+    security_opt:
+      - apparmor:unconfined
+    restart: "no"
+    volumes:
+      - /etc/avahi/avahi-daemon.conf:/host-etc/avahi/avahi-daemon.conf
