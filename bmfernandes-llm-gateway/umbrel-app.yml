@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.10.1"
+version: "0.12.1"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,27 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.10.1 — pontes agy/Claude e o setup wizard passam a rodar como containers do próprio app
+  v0.12.1 — corrige dois bugs reais na cascata de tiers: uma falha de rate-limit no modelo
+  alternativo do Groq (já escolhido pela troca automática) vazava como erro interno em vez de
+  cair pro próximo tier disponível; e a URL alternativa do Ollama configurada no /setup nunca
+  era aplicada de fato, sempre caindo no valor padrão. Corrige também o modelo padrão do tier
+  Gemini Flash, descontinuado pelo Google (3.5 → 3.6), que estava derrubando as chamadas desse
+  tier. v0.12.0 — quando a troca automática de modelo (v0.11.0) esgota as alternativas conhecidas, o
+  gateway passa a consultar o catálogo de modelos ativos do Groq e escolher um candidato novo
+  sozinho, sem esperar edição manual de arquivo. v0.11.0 — auto-cura de modelo: quando o Groq descontinua um modelo em uso, o gateway detecta
+  o erro automaticamente, troca para uma alternativa configurada e notifica — sem derrubar o
+  tier nem exigir intervenção manual. v0.10.5 — corrige o timeout curto da ponte agy que matava respostas longas (rascunho de task,
+  revisão de código) antes de terminarem de gerar: todo processo do agy gasta ~10-29s obrigatórios
+  de aquecimento (reautenticação, resolução de modelo) antes de começar a gerar, e o teto antigo
+  de 30s cobria esse ciclo inteiro. Subido para 120s por tentativa, com o timeout externo do
+  gateway ajustado junto para cobrir o pior caso das 3 tentativas de retry (362s) — os tiers
+  Gemini/GPT-OSS voltam a completar respostas longas com sucesso. v0.10.4 — logging estruturado em todas as pontes e rotas do gateway (37 chamadas migradas para
+  chave estável + campos nomeados); prompts de IA passam a viver em arquivo externo versionado
+  (docs/prompts/) em vez de hardcoded no código, primeira aplicação da política "zero hardcoded
+  prompts". Sem mudança de comportamento em produção. v0.10.3 — reduz o intervalo de keep-warm do CLI Claude de 24h para 6h (o token OAuth tem TTL
+  observado de ~7,6h; o intervalo antigo deixava a renovação atrasada em relação à própria
+  validade do token). v0.10.2 — troca flake8 por ruff/mypy (strict) na esteira de qualidade,
+  sem mudança de comportamento em produção. v0.10.1 — pontes agy/Claude e o setup wizard passam a rodar como containers do próprio app
   (antes eram processos systemd --user no host, apagados a cada reboot da OS do Beelink) —
   recuperação após queda de energia volta a ser autônoma, sem SSH. Registry Docker interno
   também vira serviço do app, corrigindo mais um caso de perda ao reiniciar. v0.9.13 — tiers que dependem de pontes externas (Gemini, GPT-OSS, Claude) falhavam rápido só às

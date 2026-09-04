@@ -6,7 +6,6 @@
 # ~/umbrel/app-data/llm-gateway/ e NÃO tem o código-fonte/Dockerfile, então `build:` local não
 # é o fluxo natural do Umbrel. A imagem vem do registry Docker privado no próprio Beelink
 # (TASK_V26), não mais do GHCR — ver decisão completa em umbrel/README.md.
-version: "3.7"
 
 # `umbrel_main_network` é a rede compartilhada que o proprio `umbreld` usa para o `app_proxy`
 # de QUALQUER app alcancar o servico `web` correspondente — achado ao vivo na validacao da
@@ -71,9 +70,14 @@ services:
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
     # do umbrelOS (o achado da TASK_V23 era sobre credencial, nao TLS). Publicacao via
     # /publicar-imagem (TASK_V05), manual, apos CI verde + tag. Trocar a tag a cada release.
-    image: 127.0.0.1:8801/llm-gateway:v0.10.1
+    image: 127.0.0.1:8801/llm-gateway:v0.12.1
     restart: on-failure
-    stop_grace_period: 1m
+    # 1m era suficiente para o antigo ANTIGRAVITY_BRIDGE_TIMEOUT=100s; com o valor subido para
+    # 420s (fix do timeout curto da ponte agy, 2026-08-25 — cobre as 3 tentativas da ponte, nao
+    # so uma, ver env ANTIGRAVITY_BRIDGE_TIMEOUT abaixo), o grace period antigo deixaria o
+    # Docker matar (SIGKILL) uma requisicao em andamento bem antes dela ter chance de terminar
+    # num stop/restart do container — subido junto para ficar acima do novo teto.
+    stop_grace_period: 430s
     depends_on:
       agy_bridge:
         condition: service_healthy
@@ -115,6 +119,14 @@ services:
       - CLAUDE_BRIDGE_TOKEN=${CLAUDE_BRIDGE_TOKEN}
       - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-llm-gateway}
       - USAGE_LOG_DIR=/gateway/usage
+      # Timeout externo (gateway -> ponte) precisa cobrir o PIOR CASO REAL da ponte, nao so uma
+      # tentativa: AGY_MAX_AUTH_RETRIES=3 x AGY_TIMEOUT_SECONDS=120 + 2 delays de 1s = 362s
+      # (bridge/antigravity_bridge.py:172-190, o timeout por tentativa fica DENTRO do loop de
+      # retry). Achado real (/padronizar, 2026-08-25): a primeira versao deste fix usava 220s
+      # aqui, cobrindo so ~1 tentativa + folga — o gateway desistia antes da ponte terminar a
+      # 2a/3a tentativa, reproduzindo exatamente o processo orfao que este comentario descreve.
+      # 420s = 362s + ~58s de folga (fila do lock global + rede). Ver app/core/config/settings.py.
+      - ANTIGRAVITY_BRIDGE_TIMEOUT=420
     volumes:
       # Log de portaria durável no storage do app (fora do container).
       - ${APP_DATA_DIR}/data/usage:/gateway/usage
@@ -135,7 +147,7 @@ services:
   # Como containers do próprio app (definição vive em /home, comprovadamente persistente e
   # subida automaticamente pelo umbreld), a recuperação pós-reboot passa a ser autônoma.
   agy_bridge:
-    image: 127.0.0.1:8801/llm-gateway-bridges:v0.10.1
+    image: 127.0.0.1:8801/llm-gateway-bridges:v0.12.1
     command: ["uvicorn", "antigravity_bridge:app", "--host", "0.0.0.0", "--port", "8802"]
     # uvicorn roda como PID 1 do container e nao reaproveita (reap) processos zumbis dos
     # subprocessos agy que ele lanca — achado do /code-review. `init: true` usa o tini do
@@ -147,6 +159,18 @@ services:
       # Default do antigravity_bridge.py é ~/.local/bin/agy (expande pra /root/... como
       # root no container); explicitar evita depender de expansão implícita de $HOME.
       - AGY_BIN=/usr/local/bin/agy
+      # Default do código (30s) mata o subprocesso agy antes de terminar de gerar: todo
+      # processo novo gasta ~10-29s de aquecimento obrigatório (reautenticação silenciosa +
+      # resolução de modelo + refresh de experimentos) antes de sequer chamar o endpoint de
+      # geração, sobrando pouco orçamento real dentro do timeout antigo. Confirmado nos
+      # logs reais do agy no host (2026-08-25, amostra de 400 processos): 41% terminam o log
+      # exatamente na linha que inicia o streaming, nunca completam — mortos pelo timeout, não
+      # por falta de cota (conta paga, 96-99% de cota remanescente na hora do diagnóstico).
+      - AGY_TIMEOUT_SECONDS=120
+    # Cobre o pior caso REAL do loop de retry inteiro (3 tentativas x 120s + 2 delays = 362s,
+    # ver ANTIGRAVITY_BRIDGE_TIMEOUT no servico web), não só uma tentativa — um stop/restart no
+    # meio da 2a/3a tentativa precisa do mesmo tempo pra terminar graciosamente.
+    stop_grace_period: 380s
     volumes:
       # Path REAL do home do usuario umbrel (/home/umbrel/...), NAO ${UMBREL_ROOT}/home/
       # (achado ao vivo, TASK_V27: sao diretorios DIFERENTES — ${UMBREL_ROOT}/home/ e uma
@@ -166,7 +190,7 @@ services:
       start_period: 10s
 
   claude_bridge:
-    image: 127.0.0.1:8801/llm-gateway-bridges:v0.10.1
+    image: 127.0.0.1:8801/llm-gateway-bridges:v0.12.1
     command: ["uvicorn", "claude_bridge:app", "--host", "0.0.0.0", "--port", "8803"]
     # Mesma ressalva do agy_bridge acima: init: true evita zumbis dos subprocessos claude.
     init: true
@@ -176,6 +200,11 @@ services:
       - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-llm-gateway}
       # Mesma ressalva do agy_bridge: default do claude_bridge.py é ~/.local/bin/claude.
       - CLAUDE_BIN=/usr/local/bin/claude
+      # Achado 2026-07-26: access token (`expiresAt`) tem TTL de ~7,6h, bem menor que o
+      # antigo intervalo de keepwarm (24h) — a credencial ficava horas sem renovação entre
+      # um keepwarm e outro. Reduzido para 6h (< 7,6h) para o keepwarm sempre pegar o token
+      # ainda vivo antes de expirar.
+      - CLAUDE_KEEPWARM_INTERVAL_SECONDS=21600
     volumes:
       # Path real do home do usuario umbrel — mesma ressalva do agy_bridge acima.
       - /home/umbrel/.claude:/root/.claude
@@ -201,7 +230,7 @@ services:
   # "no"): não precisa ficar residente, só corrigir a config antes que algo dependa de
   # `umbrel.local` resolver.
   net_bootstrap:
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap:v0.10.1
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap:v0.12.1
     pid: host
     cap_add:
       - SYS_ADMIN
