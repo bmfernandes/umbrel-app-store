@@ -70,7 +70,7 @@ services:
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
     # do umbrelOS (o achado da TASK_V23 era sobre credencial, nao TLS). Publicacao via
     # /publicar-imagem (TASK_V05), manual, apos CI verde + tag. Trocar a tag a cada release.
-    image: 127.0.0.1:8801/llm-gateway:v0.12.1
+    image: 127.0.0.1:8801/llm-gateway:v0.13.0
     restart: on-failure
     # 1m era suficiente para o antigo ANTIGRAVITY_BRIDGE_TIMEOUT=100s; com o valor subido para
     # 420s (fix do timeout curto da ponte agy, 2026-08-25 — cobre as 3 tentativas da ponte, nao
@@ -147,7 +147,7 @@ services:
   # Como containers do próprio app (definição vive em /home, comprovadamente persistente e
   # subida automaticamente pelo umbreld), a recuperação pós-reboot passa a ser autônoma.
   agy_bridge:
-    image: 127.0.0.1:8801/llm-gateway-bridges:v0.12.1
+    image: 127.0.0.1:8801/llm-gateway-bridges:v0.13.0
     command: ["uvicorn", "antigravity_bridge:app", "--host", "0.0.0.0", "--port", "8802"]
     # uvicorn roda como PID 1 do container e nao reaproveita (reap) processos zumbis dos
     # subprocessos agy que ele lanca — achado do /code-review. `init: true` usa o tini do
@@ -190,7 +190,7 @@ services:
       start_period: 10s
 
   claude_bridge:
-    image: 127.0.0.1:8801/llm-gateway-bridges:v0.12.1
+    image: 127.0.0.1:8801/llm-gateway-bridges:v0.13.0
     command: ["uvicorn", "claude_bridge:app", "--host", "0.0.0.0", "--port", "8803"]
     # Mesma ressalva do agy_bridge acima: init: true evita zumbis dos subprocessos claude.
     init: true
