@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.13.0"
+version: "0.14.0"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,13 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.12.1 — corrige dois bugs reais na cascata de tiers: uma falha de rate-limit no modelo
+  v0.14.0 — a troca automática de modelo (que já protegia o tier padrão de produção) passa a
+  proteger também os tiers premium baseados no Gemini e no GPT-OSS: quando o Google descontinua
+  uma versão de modelo em uso, o gateway escolhe sozinho um substituto da mesma família e
+  qualidade, sem esperar edição manual nem derrubar o tier — o mesmo problema real que já
+  aconteceu duas vezes com esses tiers específicos. v0.13.0 — quando um desses tiers premium rejeita um modelo descontinuado, isso deixa de ser um
+  erro genérico e passa a ser detectado e registrado de forma clara (visível no painel e nos
+  alertas), com a lista de modelos ainda disponíveis exposta junto. v0.12.1 — corrige dois bugs reais na cascata de tiers: uma falha de rate-limit no modelo
   alternativo do Groq (já escolhido pela troca automática) vazava como erro interno em vez de
   cair pro próximo tier disponível; e a URL alternativa do Ollama configurada no /setup nunca
   era aplicada de fato, sempre caindo no valor padrão. Corrige também o modelo padrão do tier
