@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.14.0"
+version: "0.15.0"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,11 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.14.0 — a troca automática de modelo (que já protegia o tier padrão de produção) passa a
+  v0.15.0 — o modelo local (que roda inteiramente dentro de casa, sem depender de internet) ganha
+  uma rede de segurança própria: se a máquina principal que hospeda esse modelo cair, o gateway
+  passa sozinho para uma segunda cópia mais simples, sempre de prontidão, sem que ninguém precise
+  pedir isso diretamente — evita que essa camada fique totalmente indisponível quando o hardware
+  principal tiver problema (já aconteceu antes). v0.14.0 — a troca automática de modelo (que já protegia o tier padrão de produção) passa a
   proteger também os tiers premium baseados no Gemini e no GPT-OSS: quando o Google descontinua
   uma versão de modelo em uso, o gateway escolhe sozinho um substituto da mesma família e
   qualidade, sem esperar edição manual nem derrubar o tier — o mesmo problema real que já
@@ -89,6 +93,10 @@ releaseNotes: >-
   GATEWAY_SECRETS/GROQ_API_KEY/tokens de ponte direto pela UI no 1º acesso, sem precisar de
   variáveis de ambiente (o instalador do Umbrel não tem esse formulário). 1º acesso cria a conta
   de administrador; acessos seguintes exigem usuário/senha.
-# Sem dependências de outros apps Umbrel: Ollama (server) e as pontes agy/claude são host-side,
-# alcançados por Tailscale / host.docker.internal — não são apps do Umbrel.
+# Ollama (server, tier low) e as pontes agy/claude seguem host-side, alcançados por
+# Tailscale / rede do compose — não são apps do Umbrel. TASK_V36 (tier floor, fallback
+# CPU): reaproveita o app "ollama" já instalado via Umbrel App Store (ollama_ollama_1,
+# rede umbrel_main_network) — não é uma dependência de instalação (o app funciona sem
+# ele, floor só fica indisponível/não configurado), por isso "dependencies" continua
+# vazio; mas deixa de ser correto dizer que nenhum tier depende de app do Umbrel.
 dependencies: []
