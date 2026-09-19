@@ -94,6 +94,20 @@ services:
       - 100.100.100.100
       - 1.1.1.1
     environment:
+      # Limites de tamanho de prompt por tier (TASK_V41): todos nasceram em 2000 tokens
+      # (calibrado só para o floor, CPU fraca) — achado real (2026-09-19): esse teto único
+      # bloqueava /code-review e /teste-unitario pra qualquer arquivo real de projeto (um
+      # arquivo de 210 linhas já estoura 2000 tokens embrulhado no prompt de revisão),
+      # confirmado ao vivo com um 413 real. super/ultra/max/high (Gemini/Claude/GPT-OSS via
+      # API, sem a limitação de CPU do floor) sobem para 100000; medium (produção,
+      # Groq->Ollama) para 20000. floor fica em 2000 (único com incidente medido de verdade
+      # — CPU do Beelink, ver TASK_V36); low fica no default do código (2000, sem incidente
+      # medido ainda, ver TASK_V41 §5).
+      - PROMPT_MAX_TOKENS_SUPER=100000
+      - PROMPT_MAX_TOKENS_ULTRA=100000
+      - PROMPT_MAX_TOKENS_MAX=100000
+      - PROMPT_MAX_TOKENS_HIGH=100000
+      - PROMPT_MAX_TOKENS_MEDIUM=20000
       # No arranjo TASK_V17 a GPU/mídia vive no ubuntu-server; o Beelink não arbitra GPU local.
       - ARBITER_ENABLED=false
       # Ollama do ubuntu-server via Tailscale (tier low) — configurado via /setup (mesmo
