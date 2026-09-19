@@ -103,11 +103,11 @@ services:
       # Groq->Ollama) para 20000. floor fica em 2000 (único com incidente medido de verdade
       # — CPU do Beelink, ver TASK_V36); low fica no default do código (2000, sem incidente
       # medido ainda, ver TASK_V41 §5).
-      - PROMPT_MAX_TOKENS_SUPER=100000
-      - PROMPT_MAX_TOKENS_ULTRA=100000
-      - PROMPT_MAX_TOKENS_MAX=100000
-      - PROMPT_MAX_TOKENS_HIGH=100000
-      - PROMPT_MAX_TOKENS_MEDIUM=20000
+      - PROMPT_MAX_TOKENS_SUPER=102400
+      - PROMPT_MAX_TOKENS_ULTRA=102400
+      - PROMPT_MAX_TOKENS_MAX=102400
+      - PROMPT_MAX_TOKENS_HIGH=102400
+      - PROMPT_MAX_TOKENS_MEDIUM=20480
       # No arranjo TASK_V17 a GPU/mídia vive no ubuntu-server; o Beelink não arbitra GPU local.
       - ARBITER_ENABLED=false
       # Ollama do ubuntu-server via Tailscale (tier low) — configurado via /setup (mesmo
