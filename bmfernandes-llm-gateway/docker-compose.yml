@@ -270,7 +270,7 @@ services:
   # `pid: host` + capabilities + AppArmor unconfined de sempre) — o que muda é o que o
   # container faz, não o que ele pode fazer (ver SECURITY_GATE.md).
   net_bootstrap:
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap:v0.16.0
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap:v0.19.1
     pid: host
     cap_add:
       - SYS_ADMIN
