@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.20.0"
+version: "0.20.1"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,9 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.19.0 — reservas de placa de vídeo passam a responder só ao dono que as criou (antes,
+  v0.20.1 — corrige a configuração que permitia usar o modelo de reserva (fallback de
+  última instância) em produção, e ajusta os nomes dos modelos locais no painel para deixar
+  claro em qual máquina cada um roda. v0.19.0 — reservas de placa de vídeo passam a responder só ao dono que as criou (antes,
   qualquer aplicativo autenticado podia liberar ou renovar a reserva de outro); tentativas
   repetidas de login errado no portão de acesso passam a ser bloqueadas por um tempo, mesmo
   que a tentativa seguinte acerte a senha; e toda tentativa de acesso recusada passa a deixar
