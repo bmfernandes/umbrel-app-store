@@ -126,11 +126,12 @@ services:
       - OLLAMA_FALLBACK_URL=${OLLAMA_FALLBACK_URL:-http://ollama_ollama_1:11434}
       - OLLAMA_FALLBACK_MODEL=${OLLAMA_FALLBACK_MODEL:-qwen2.5:14b}
       # Allowlist de client_id autorizados a pedir tier="floor" direto (TASK_V36,
-      # Emenda V04) — vazio por padrao (ninguem). Preencher com o client_id DEDICADO
-      # da auditoria (TASK_V40, Emenda V01/G'-1) quando aquele mecanismo for instalado
-      # em producao; nunca com um client_id generico compartilhado com outros
-      # consumidores da frota.
-      - TIER_FLOOR_CLIENT_IDS=${TIER_FLOOR_CLIENT_IDS:-}
+      # Emenda V04). Default versionado `dev_audit` (TASK_V40, G'-1, 2026-09-24): e so um
+      # NOME de client_id, nao um segredo (o par client_id:secret correspondente vive no
+      # GATEWAY_SECRETS persistido via /setup, nunca aqui) — seguro de versionar, e evita
+      # que um restart pela UI do Umbrel (que nao herda env var nenhuma exportada
+      # manualmente) derrube o unico consumidor autorizado a chamar floor direto.
+      - TIER_FLOOR_CLIENT_IDS=${TIER_FLOOR_CLIENT_IDS:-dev_audit}
       # Pontes containerizadas (TASK_V27, reverte parcialmente a TASK_V05): serviços na
       # mesma rede do compose, endereçados por nome — não mais host.docker.internal.
       - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://agy_bridge:8802}
