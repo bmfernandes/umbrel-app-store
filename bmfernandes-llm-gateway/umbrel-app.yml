@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.21.0"
+version: "0.21.1"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,7 +28,12 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.21.0 — cada sistema que usa o gateway agora pode ter sua própria credencial de acesso,
+  v0.21.1 — o "cofre" de imagens Docker do servidor deixa de aceitar upload de qualquer
+  aparelho conectado à rede da casa: agora só quem já tem a chave de acesso remoto ao
+  servidor pode publicar uma imagem nova, através de uma conexão criptografada dedicada.
+  O servidor também passa a conferir a "impressão digital" exata de cada peça de software
+  antes de rodar, em vez de confiar só no nome/etiqueta dela — uma trava extra contra
+  substituição indevida. v0.21.0 — cada sistema que usa o gateway agora pode ter sua própria credencial de acesso,
   cadastrada e trocada direto pela tela de administração — antes, todos os sistemas compartilhavam
   uma única chave definida por configuração, e trocá-la cortava o acesso de todo mundo ao mesmo
   tempo, sem aviso. Agora a troca é gradual: a credencial antiga continua funcionando até ser
