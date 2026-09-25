@@ -70,7 +70,7 @@ services:
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
     # do umbrelOS (o achado da TASK_V23 era sobre credencial, nao TLS). Publicacao via
     # /publicar-imagem (TASK_V05), manual, apos CI verde + tag. Trocar a tag a cada release.
-    image: 127.0.0.1:8801/llm-gateway:v0.20.1
+    image: 127.0.0.1:8801/llm-gateway:v0.21.0
     restart: on-failure
     # 1m era suficiente para o antigo ANTIGRAVITY_BRIDGE_TIMEOUT=100s; com o valor subido para
     # 420s (fix do timeout curto da ponte agy, 2026-08-25 — cobre as 3 tentativas da ponte, nao
