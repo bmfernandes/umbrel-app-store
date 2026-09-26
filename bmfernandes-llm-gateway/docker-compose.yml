@@ -184,8 +184,8 @@ services:
   # Como containers do próprio app (definição vive em /home, comprovadamente persistente e
   # subida automaticamente pelo umbreld), a recuperação pós-reboot passa a ser autônoma.
   agy_bridge:
-    # tag: llm-gateway-bridges:v0.16.1 (TASK_V43, Frente B — mesma imagem de claude_bridge)
-    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:2002f12e3b09cf240a179f6c28dbc0d67e404e36700110bd361fd79f637d4a5c
+    # tag: llm-gateway-bridges:v0.21.2 (TASK_V33 — cwd fixo, mesma imagem de claude_bridge)
+    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:0defa9ff658ff0487104ba8043822105db7f9fddeda4d39397db24291c41a374
     command: ["uvicorn", "antigravity_bridge:app", "--host", "0.0.0.0", "--port", "8802"]
     # uvicorn roda como PID 1 do container e nao reaproveita (reap) processos zumbis dos
     # subprocessos agy que ele lanca — achado do /code-review. `init: true` usa o tini do
@@ -228,8 +228,8 @@ services:
       start_period: 10s
 
   claude_bridge:
-    # tag: llm-gateway-bridges:v0.16.1 (TASK_V43, Frente B — mesma imagem de agy_bridge)
-    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:2002f12e3b09cf240a179f6c28dbc0d67e404e36700110bd361fd79f637d4a5c
+    # tag: llm-gateway-bridges:v0.21.2 (TASK_V33 — cwd fixo, mesma imagem de agy_bridge)
+    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:0defa9ff658ff0487104ba8043822105db7f9fddeda4d39397db24291c41a374
     command: ["uvicorn", "claude_bridge:app", "--host", "0.0.0.0", "--port", "8803"]
     # Mesma ressalva do agy_bridge acima: init: true evita zumbis dos subprocessos claude.
     init: true
