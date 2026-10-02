@@ -277,35 +277,46 @@ services:
     # compartilhada). Anexar esta ponte à rede compartilhada tornaria /credencial
     # alcançável por qualquer app de terceiro do Umbrel.
 
-  # Único container privilegiado do desenho (TASK_V27) — isolado de propósito das pontes,
-  # que continuam sem privilégio algum. Reaplica a cada boot, via `nsenter` no namespace do
-  # host (`pid: host`), duas coisas apagadas pelo root overlay efêmero do umbrelOS: o fix de
-  # mDNS (TASK_V28) e, desde a TASK_V39, o acesso de deploy sem senha do host (grupo
-  # `docker`, dois scripts fixos em /usr/local/bin, regra de /etc/sudoers.d) — ver
-  # umbrel/net-bootstrap/entrypoint.sh (despachante) e hooks/10-mdns.sh + hooks/20-deploy-privs.sh.
-  # Roda uma vez e sai (restart: "no"): não precisa ficar residente, só reaplicar a config
-  # antes que algo dependa dela. Delta de capacidade zero em relação à TASK_V27 (mesmo
-  # `pid: host` + capabilities + AppArmor unconfined de sempre) — o que muda é o que o
-  # container faz, não o que ele pode fazer (ver SECURITY_GATE.md).
-  net_bootstrap:
-    # tag: llm-gateway-net-bootstrap:v0.19.4 (fix: llm-gateway-docker-ops.sh aceita nome
-    # de container v1/underscore além de v2/hífen, achado ao vivo na verificação da
-    # Fase 3; fixação por digest é especialmente relevante aqui: sem ela, quem publica
-    # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima subida, ver
-    # exceção 27decaa7 do SECURITY_GATE.md)
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap@sha256:81a0c0fa129bdd6a4f28b7d4f80b09deb580040bcd7b94598b7d92feb421eb9b
-    pid: host
-    cap_add:
-      - SYS_ADMIN
-      - SYS_PTRACE
-      - SYS_CHROOT
-    # cap_add sozinho NAO basta para nsenter --mount: o perfil AppArmor padrao do Docker
-    # (docker-default) bloqueia mount() mesmo com SYS_ADMIN presente — achado ao vivo na
-    # validacao da TASK_V27 (container morria com exit 1 e ZERO log, sem nenhuma mensagem
-    # de erro visivel, porque o AppArmor mata a chamada antes do nsenter conseguir escrever
-    # no stderr). Camada de seguranca separada das capabilities Linux.
+  # TASK_V44 Fase 4: o antigo container único e privilegiado (`net_bootstrap`,
+  # `pid: host` + SYS_ADMIN/SYS_PTRACE/SYS_CHROOT + apparmor:unconfined) foi
+  # dividido em dois serviços de privilégio mínimo e disjunto — nenhum dos
+  # dois usa `nsenter`, `pid: host`, capabilities ou AppArmor unconfined (ver
+  # SECURITY_GATE.md, exceções 27decaa7/32c853c7/e59d4754, fechadas por esta
+  # divisão). Cada um roda uma vez e sai (restart: "no").
+
+  # mDNS: reaplica a config do avahi (TASK_V28) a cada boot. `network_mode:
+  # host` dispensa `nsenter -n` (o container já está na netns do host); o
+  # reinício do avahi usa o socket D-Bus do sistema (bind-mount), não mais
+  # `nsenter -m -- systemctl` — confirmado por probe real (Fase 0) que
+  # `RestartUnit` funciona de dentro de um container `cap_drop: [ALL]`.
+  mdns_bootstrap:
+    # tag: llm-gateway-net-bootstrap-mdns:v0.1.0 (TASK_V44 Fase 4)
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-mdns@sha256:bf3acab7857b00b5ef1e2cbba1187cf3584f6d82c41880c6e7b468485ee5e93c
+    network_mode: host
+    cap_drop:
+      - ALL
     security_opt:
-      - apparmor:unconfined
+      - no-new-privileges:true
     restart: "no"
     volumes:
       - /etc/avahi/avahi-daemon.conf:/host-etc/avahi/avahi-daemon.conf
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+
+  # Deploy sem senha: reaplica os 4 scripts fixos em /opt/llm-gateway/bin e a
+  # regra de /etc/sudoers.d/umbrel-llm-gateway-deploy a cada boot. Bind-mount
+  # de DIRETÓRIO inteiro (nunca arquivo único — TASK_V27: `rename()` sobre
+  # bind-mount de arquivo único dá `EBUSY`) dispensa `nsenter -m` por completo.
+  deploy_privs_bootstrap:
+    # tag: llm-gateway-net-bootstrap-deploy-privs:v0.1.0 (TASK_V44 Fase 4) —
+    # fixação por digest é especialmente relevante aqui: sem ela, quem publica
+    # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
+    # subida, ver exceção 27decaa7 do SECURITY_GATE.md
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:33862c412ce4d4c49b83f1dfa5531f89c9509b329fc653efd6d4a3886b045d47
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+    volumes:
+      - /etc/sudoers.d:/etc/sudoers.d
+      - /opt/llm-gateway/bin:/opt/llm-gateway/bin
