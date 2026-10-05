@@ -31,7 +31,7 @@ services:
     # app principal: o app instalado no Umbrel vive em `~/umbrel/app-data/<app_id>/` e NÃO
     # tem o código-fonte/Dockerfile, então `build:` local não é o fluxo natural do Umbrel
     # (build local, pra teste, é `docker build -f umbrel-audit/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:7e9f30f6096a9eb82b5f69d2da6c9755f311272f8734cca7ae903a5551dff8b0
+    image: 127.0.0.1:8801/dev-audit@sha256:eb3f5f7d7c9c25a596e36d5549c84dfe757feb4c5a6fcdad7269e18b21a7b563
     # A-3: sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade
     # (próximo horário + jitter) é interno ao próprio processo (app_runner.py), não deste
     # restart policy, que só cobre "o container caiu, suba de novo".
@@ -67,11 +67,12 @@ services:
       - AUDIT_MIRROR_BASE_DIR=/app/projetos
       - AUDIT_REPORT_BASE_DIR=/audit-reports
       # Deploy key de leitura dedicada (3.2/C-3) — a URL em si não é segredo, mas a
-      # autenticação SSH (qual chave usar) é configuração de ambiente (GIT_SSH_COMMAND/
-      # known_hosts), não deste app_runner.py; a chave em si vem de ${APP_DATA_DIR}/
-      # deploy-keys (ro, acima) — como ela chega até o `git clone`/`fetch` de fato ainda
-      # não está implementado (fora do escopo desta fase).
+      # autenticação SSH (qual chave usar) é configuração de ambiente, lida por
+      # `sync.py` via `GIT_SSH_COMMAND` (achado real, 2026-10-05: implementado agora —
+      # faltava a propagação até o `subprocess.run` do git). A chave em si vem de
+      # ${APP_DATA_DIR}/deploy-keys (ro, acima), nome fixo = nome do projeto.
       - AUDIT_LLM_GATEWAY_REMOTE_URL=${AUDIT_LLM_GATEWAY_REMOTE_URL:-git@github.com:bmfernandes/llm-gateway.git}
+      - AUDIT_LLM_GATEWAY_DEPLOY_KEY_PATH=/app/deploy-keys/llm-gateway
       - AUDIT_LLM_GATEWAY_UMBREL_APP_YML=/host-artifacts/llm-gateway-umbrel-app.yml
     volumes:
       # --- Inventário e mirrors de leitura (3.1/3.2, dentro do app-data: re-clonável) ---

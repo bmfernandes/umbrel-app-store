@@ -7,7 +7,7 @@ name: Auditoria Independente
 tagline: Verificação contínua de fidelidade task↔código e integridade do host
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-dev-audit/icon.svg
 category: Developer Tools
-version: "0.1.0"
+version: "0.1.1"
 # `port` é obrigatório no schema do manifesto (zod, AppManifestSchema) mesmo sem UI —
 # este app não publica nada via app_proxy (sem serviço algum exposto no docker-compose.yml,
 # TASK_V46 A-1). Valor nominal, nunca de fato escutado por nada.
@@ -28,7 +28,9 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
-  v0.1.0 — primeira versão: verificação de integridade do host (sudoers de deploy + 4
+  v0.1.1 — corrige sincronização do mirror git: a deploy key de leitura dedicada (3.2/C-3)
+  nunca era usada de fato (faltava `GIT_SSH_COMMAND`); clone/fetch agora autenticam com
+  ela. v0.1.0 — primeira versão: verificação de integridade do host (sudoers de deploy + 4
   scripts de bootstrap do llm-gateway contra a tag git implantada), sincronização de
   leitura do mirror git, escrita do relatório local e agendamento próprio (4h + jitter).
   Pipeline de fidelidade task↔código (herdado da TASK_V40) ainda não ligado a este app.
