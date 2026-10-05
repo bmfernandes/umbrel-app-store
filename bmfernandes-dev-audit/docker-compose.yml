@@ -31,7 +31,7 @@ services:
     # app principal: o app instalado no Umbrel vive em `~/umbrel/app-data/<app_id>/` e NÃO
     # tem o código-fonte/Dockerfile, então `build:` local não é o fluxo natural do Umbrel
     # (build local, pra teste, é `docker build -f umbrel-audit/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:eb3f5f7d7c9c25a596e36d5549c84dfe757feb4c5a6fcdad7269e18b21a7b563
+    image: 127.0.0.1:8801/dev-audit@sha256:add42e532ccecf36fc3fe5ed80736c548e215bf544e5e7d3499b82bd0e832f70
     # A-3: sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade
     # (próximo horário + jitter) é interno ao próprio processo (app_runner.py), não deste
     # restart policy, que só cobre "o container caiu, suba de novo".
