@@ -1,0 +1,114 @@
+# docker-compose do app Umbrel bmfernandes-dev-audit (TASK_V46 Bloco A). Auditoria
+# independente (TASK_V40, lógica de coleta/triagem/confirmação reaproveitada sem mudança,
+# §4 Não-Escopo) + verificação de integridade do host (Bloco D, classe H1), rodando 24h no
+# Beelink, nunca na máquina de dev. App SEPARADO do bmfernandes-llm-gateway — nunca um
+# serviço dentro do compose dele (A-1), próprio ciclo de vida, próprio deploy
+# (.publicar-umbrel-audit.yml, resolução de P17).
+#
+# SEM app_proxy / porta publicada: este app não tem UI (o dashboard de indicadores é
+# TASK_V48, ainda não implementada) — nada a expor ao app_proxy do Umbrel por ora.
+#
+# ACHADO EMPÍRICO (validação local, 2026-10-04 — ver P2 resolvido): usuário não-root com
+# GID `0` (grupo `root`) lê o sudoers `0440 root:root` via permissão de GRUPO comum do
+# Unix, sem nenhuma capability — zero `cap_add`, `cap_drop: ALL` em todos os serviços.
+
+networks:
+  default: {}
+  # Mesma rede compartilhada que `web`/`app_proxy` do app principal já usam (umbrel/docker-
+  # compose.yml) — permite alcançar o Gateway pelo nome do serviço, sem depender de
+  # MagicDNS Tailscale estar presente dentro do próprio host (ressalva do A-5: "valor exato
+  # a verificar no host"). `AUDIT_GATEWAY_URL` continua configurável via env, nunca
+  # hardcoded — este anexo de rede só торna a rota local uma opção viável.
+  umbrel_main_network:
+    external: true
+
+services:
+  runner:
+    # tag: dev-audit:v0.1.0 (primeiro release, TASK_V46) — SUBSTITUIR o digest abaixo no
+    # tag: dev-audit:v0.1.0 — publicada de verdade em 2026-10-05 (primeiro /publicar-umbrel
+    # real deste app, digest conferido via `docker buildx imagetools inspect`).
+    # Imagem publicada, nunca `build:` — mesma decisão do `umbrel/docker-compose.yml` do
+    # app principal: o app instalado no Umbrel vive em `~/umbrel/app-data/<app_id>/` e NÃO
+    # tem o código-fonte/Dockerfile, então `build:` local não é o fluxo natural do Umbrel
+    # (build local, pra teste, é `docker build -f umbrel-audit/Dockerfile .` manual).
+    image: 127.0.0.1:8801/dev-audit@sha256:7e9f30f6096a9eb82b5f69d2da6c9755f311272f8734cca7ae903a5551dff8b0
+    # A-3: sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade
+    # (próximo horário + jitter) é interno ao próprio processo (app_runner.py), não deste
+    # restart policy, que só cobre "o container caiu, suba de novo".
+    restart: unless-stopped
+    # A-2/P2 (achado empírico): usuário não-root (UID arbitrário, não precisa existir em
+    # /etc/passwd de lado nenhum — numérico basta) + GID 0 (grupo root) é suficiente pra
+    # ler o sudoers 0440 via permissão de grupo Unix comum. Testado e confirmado local:
+    # zero capabilities, zero setcap, zero binário extra.
+    user: "1000:0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # D-5: estritamente somente-leitura sobre o host — filesystem do container travado;
+    # só os volumes abaixo (explicitamente read-write onde o PRÓPRIO app escreve: o mirror
+    # git e o diretório de relatório) permitem escrita.
+    read_only: true
+    tmpfs:
+      - /tmp
+    # E-1: prioridade baixa explícita (achado real 2026-10-02/03 — bitcoind do mesmo
+    # Beelink saturou a máquina, 670% CPU/46% RAM, travou 18 updates de apps em 1%).
+    # Valores de primeira passagem, a calibrar na implementação real.
+    cpus: "0.50"
+    mem_limit: 256m
+    environment:
+      - AUDIT_GATEWAY_URL=${AUDIT_GATEWAY_URL:-http://bmfernandes-llm-gateway_web_1:8800}
+      - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-auditoria}
+      # PLACEHOLDER (ver app_runner.py): só llm-gateway, só host_integrity. O loop real de
+      # N projetos a partir de projetos.yml (Bloco A/3.2) e o pipeline completo de
+      # triagem/confirmação (D0-D6) ainda não existem em código — sync/report_store/
+      # recovery (Bloco B/C) já estão implementados e ligados, mas só pra este 1 projeto.
+      - AUDIT_PROJETO_NOME=llm-gateway
+      - AUDIT_MIRROR_BASE_DIR=/app/projetos
+      - AUDIT_REPORT_BASE_DIR=/audit-reports
+      # Deploy key de leitura dedicada (3.2/C-3) — a URL em si não é segredo, mas a
+      # autenticação SSH (qual chave usar) é configuração de ambiente (GIT_SSH_COMMAND/
+      # known_hosts), não deste app_runner.py; a chave em si vem de ${APP_DATA_DIR}/
+      # deploy-keys (ro, acima) — como ela chega até o `git clone`/`fetch` de fato ainda
+      # não está implementado (fora do escopo desta fase).
+      - AUDIT_LLM_GATEWAY_REMOTE_URL=${AUDIT_LLM_GATEWAY_REMOTE_URL:-git@github.com:bmfernandes/llm-gateway.git}
+      - AUDIT_LLM_GATEWAY_UMBREL_APP_YML=/host-artifacts/llm-gateway-umbrel-app.yml
+    volumes:
+      # --- Inventário e mirrors de leitura (3.1/3.2, dentro do app-data: re-clonável) ---
+      # PRÉ-REQUISITO DE HOST (achado real, F-8): precisa existir com grupo `root`
+      # (GID 0) e `0775` — `git fetch`/`merge` (Bloco B) escreve dentro de `.git/` do
+      # mirror. Bootstrap do clone inicial (se o mirror ainda não existir) não tem código
+      # ainda — `sync.py` hoje só faz fetch+merge sobre um mirror pré-existente.
+      - ${APP_DATA_DIR}/projetos.yml:/app/projetos.yml:ro
+      - ${APP_DATA_DIR}/projetos:/app/projetos
+      # Deploy keys de leitura, uma por projeto inscrito (3.2/C-3) — read-only, nunca
+      # escrita (reforça A-4/C-6: nenhuma credencial de escrita existe do lado Beelink).
+      - ${APP_DATA_DIR}/deploy-keys:/app/deploy-keys:ro
+
+      # --- Relatório (B-1): FORA do app-data, direto no host, por projeto ---
+      # A CONFIRMAR NA IMPLEMENTAÇÃO (achado N6 do Opus, rodada 3): o `umbreld` precisa
+      # aceitar bind-mount com caminho absoluto do host fora de `${APP_DATA_DIR}` num app
+      # Community. Se recusar, revisitar via symlink dentro do app-data apontando pro path
+      # externo, sem abrir mão de "fora do app-data" como propriedade (B-1).
+      # PRÉ-REQUISITO DE HOST (achado real, validação local de ponta a ponta, 2026-10-04 —
+      # F-8): este diretório (e `${APP_DATA_DIR}/projetos/<slug>/mirror/`, que git fetch/
+      # merge também escreve) precisa existir com grupo `root` (GID 0) e bit de escrita de
+      # grupo (`0775`) — GID 0 é o domínio de privilégio deste app em leitura (sudoers) E
+      # escrita (relatório/mirror), mesmo princípio estendido dos dois lados. Sem isso,
+      # `PermissionError` na primeira escrita/no primeiro `git fetch`. Quem cria isso com
+      # essa permissão na primeira vez é trabalho da migração/bootstrap (A-6/H-1), ainda
+      # não implementado.
+      - /home/umbrel/audit-reports:/audit-reports
+
+      # --- host_integrity (Bloco D): artefatos reais do host, somente-leitura ---
+      # Mesmo path dentro e fora do container (convenção já usada por `deploy_privs_
+      # bootstrap` no compose do app principal) — `host_integrity.ARTEFATOS_LLM_GATEWAY`
+      # tem os caminhos host hardcoded, então o container precisa vê-los no MESMO lugar.
+      - /etc/sudoers.d/umbrel-llm-gateway-deploy:/etc/sudoers.d/umbrel-llm-gateway-deploy:ro
+      - /opt/llm-gateway/bin:/opt/llm-gateway/bin:ro
+      # Versão DE FATO implantada do app principal (D-2) — lê `version:` do manifesto já
+      # copiado pro app-data dele, nunca o `HEAD` do branch padrão.
+      - /home/umbrel/umbrel/app-data/bmfernandes-llm-gateway/umbrel-app.yml:/host-artifacts/llm-gateway-umbrel-app.yml:ro
+    networks:
+      - default
+      - umbrel_main_network

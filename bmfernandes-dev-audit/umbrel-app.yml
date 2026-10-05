@@ -1,0 +1,35 @@
+# Manifesto Umbrel Community App do app de auditoria independente (TASK_V46 Bloco A).
+# CÓPIA DE REFERÊNCIA — a fonte que o Umbrel de fato lê é o repo público
+# github.com/bmfernandes/umbrel-app-store (bmfernandes-dev-audit/). Atualizar os dois em sincronia.
+manifestVersion: 1
+id: bmfernandes-dev-audit
+name: Auditoria Independente
+tagline: Verificação contínua de fidelidade task↔código e integridade do host
+icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-dev-audit/icon.svg
+category: Developer Tools
+version: "0.1.0"
+# `port` é obrigatório no schema do manifesto (zod, AppManifestSchema) mesmo sem UI —
+# este app não publica nada via app_proxy (sem serviço algum exposto no docker-compose.yml,
+# TASK_V46 A-1). Valor nominal, nunca de fato escutado por nada.
+port: 8900
+# Sem dashboard — path vazio (mesma convenção do app "ollama", headless, já instalado
+# neste Umbrel).
+path: ""
+description: >-
+  Auditoria independente e contínua de dois tipos: fidelidade entre tasks aprovadas e o
+  código commitado (TASK_V40, classes D0-D6), e integridade de arquivos sensíveis do host
+  — sudoers de deploy e scripts de bootstrap — contra referência versionada (TASK_V46,
+  classe H1). Roda 24h, sem interface própria; o relatório é publicado no repositório do
+  projeto auditado pela máquina de desenvolvimento, nunca por este app.
+developer: BMFERNANDES
+website: https://github.com/bmfernandes/llm-gateway
+submitter: BMFERNANDES
+repo: https://github.com/bmfernandes/llm-gateway
+support: https://github.com/bmfernandes/llm-gateway/issues
+gallery: []
+releaseNotes: >-
+  v0.1.0 — primeira versão: verificação de integridade do host (sudoers de deploy + 4
+  scripts de bootstrap do llm-gateway contra a tag git implantada), sincronização de
+  leitura do mirror git, escrita do relatório local e agendamento próprio (4h + jitter).
+  Pipeline de fidelidade task↔código (herdado da TASK_V40) ainda não ligado a este app.
+dependencies: []
