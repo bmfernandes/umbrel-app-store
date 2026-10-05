@@ -31,7 +31,7 @@ services:
     # app principal: o app instalado no Umbrel vive em `~/umbrel/app-data/<app_id>/` e NÃO
     # tem o código-fonte/Dockerfile, então `build:` local não é o fluxo natural do Umbrel
     # (build local, pra teste, é `docker build -f umbrel-audit/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:add42e532ccecf36fc3fe5ed80736c548e215bf544e5e7d3499b82bd0e832f70
+    image: 127.0.0.1:8801/dev-audit@sha256:554719f6eeed84e853772da5837242392d250a1b617c3308a6483ab39492bc2a
     # A-3: sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade
     # (próximo horário + jitter) é interno ao próprio processo (app_runner.py), não deste
     # restart policy, que só cobre "o container caiu, suba de novo".
@@ -74,6 +74,9 @@ services:
       - AUDIT_LLM_GATEWAY_REMOTE_URL=${AUDIT_LLM_GATEWAY_REMOTE_URL:-git@github.com:bmfernandes/llm-gateway.git}
       - AUDIT_LLM_GATEWAY_DEPLOY_KEY_PATH=/app/deploy-keys/llm-gateway
       - AUDIT_LLM_GATEWAY_UMBREL_APP_YML=/host-artifacts/llm-gateway-umbrel-app.yml
+      # TEMPORÁRIO (2026-10-05): verificação ao vivo do loop sleep->dispara-sozinho do A-3.
+      # REMOVER após confirmar — nunca fica em produção.
+      - AUDIT_INTERVALO_TESTE_SEGUNDOS=600
     volumes:
       # --- Inventário e mirrors de leitura (3.1/3.2, dentro do app-data: re-clonável) ---
       # PRÉ-REQUISITO DE HOST (achado real, F-8): precisa existir com grupo `root`
