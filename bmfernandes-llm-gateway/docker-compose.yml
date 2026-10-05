@@ -311,12 +311,15 @@ services:
   # TASK_V27: `rename()` sobre bind-mount de arquivo único dá `EBUSY`)
   # dispensa `nsenter -m` por completo.
   deploy_privs_bootstrap:
-    # tag: llm-gateway-net-bootstrap-deploy-privs:v0.2.0 (TASK_V46 — extensão
-    # pra provisionar o app bmfernandes-dev-audit pelo mesmo mecanismo) —
-    # fixação por digest é especialmente relevante aqui: sem ela, quem publica
-    # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
-    # subida, ver exceção 27decaa7 do SECURITY_GATE.md
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:395809d47cc72eefc822e0c1a4bd104975481acb4860333df2bc499b88e17a0c
+    # tag: llm-gateway-net-bootstrap-deploy-privs:v0.2.1 (TASK_V46 — extensão
+    # pra provisionar o app bmfernandes-dev-audit pelo mesmo mecanismo; v0.2.1
+    # remove o script `install.sh`/`apps.install.mutate` da v0.2.0 — a
+    # instalação do app é feita pela UI do Umbrel, nunca por CLI automatizada
+    # aqui, mesmo padrão já usado para o próprio llm-gateway) — fixação por
+    # digest é especialmente relevante aqui: sem ela, quem publica esta tag
+    # determina o conteúdo de /etc/sudoers.d/ do host na próxima subida, ver
+    # exceção 27decaa7 do SECURITY_GATE.md
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:688c6346c5c402f3c55c3342b6229976f51e4e2f3084d169c08ff5d98c82b0ff
     cap_drop:
       - ALL
     security_opt:
