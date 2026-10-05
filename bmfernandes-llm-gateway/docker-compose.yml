@@ -302,16 +302,21 @@ services:
       - /etc/avahi/avahi-daemon.conf:/host-etc/avahi/avahi-daemon.conf
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
 
-  # Deploy sem senha: reaplica os 4 scripts fixos em /opt/llm-gateway/bin e a
-  # regra de /etc/sudoers.d/umbrel-llm-gateway-deploy a cada boot. Bind-mount
-  # de DIRETÓRIO inteiro (nunca arquivo único — TASK_V27: `rename()` sobre
-  # bind-mount de arquivo único dá `EBUSY`) dispensa `nsenter -m` por completo.
+  # Deploy sem senha: reaplica os scripts fixos em /opt/<app>/bin e a regra de
+  # /etc/sudoers.d/<app>-deploy a cada boot, para TODOS os apps provisionados
+  # (TASK_V44 Fase 4: llm-gateway; TASK_V46: estendido para
+  # bmfernandes-dev-audit — mesmo container, mesmo mecanismo, novo bind-mount
+  # de diretório próprio; nenhum app toca no `dest_dir`/sudoers do outro, ver
+  # `entrypoint.sh`). Bind-mount de DIRETÓRIO inteiro (nunca arquivo único —
+  # TASK_V27: `rename()` sobre bind-mount de arquivo único dá `EBUSY`)
+  # dispensa `nsenter -m` por completo.
   deploy_privs_bootstrap:
-    # tag: llm-gateway-net-bootstrap-deploy-privs:v0.1.0 (TASK_V44 Fase 4) —
+    # tag: llm-gateway-net-bootstrap-deploy-privs:v0.2.0 (TASK_V46 — extensão
+    # pra provisionar o app bmfernandes-dev-audit pelo mesmo mecanismo) —
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica
     # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
     # subida, ver exceção 27decaa7 do SECURITY_GATE.md
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:33862c412ce4d4c49b83f1dfa5531f89c9509b329fc653efd6d4a3886b045d47
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:395809d47cc72eefc822e0c1a4bd104975481acb4860333df2bc499b88e17a0c
     cap_drop:
       - ALL
     security_opt:
@@ -320,3 +325,4 @@ services:
     volumes:
       - /etc/sudoers.d:/etc/sudoers.d
       - /opt/llm-gateway/bin:/opt/llm-gateway/bin
+      - /opt/bmfernandes-dev-audit/bin:/opt/bmfernandes-dev-audit/bin
