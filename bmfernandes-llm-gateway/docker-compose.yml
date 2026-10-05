@@ -322,7 +322,7 @@ services:
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica
     # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
     # subida, ver exceção 27decaa7 do SECURITY_GATE.md
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:e69bdd31f9299af358a97a0903394de9030f4f2540282abfd50108f5ceab5c94
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:2d56cc686d0846ce5e91b02614705f5a6d32af37eea3c6c99808e3473199ff45
     cap_drop:
       - ALL
     security_opt:
