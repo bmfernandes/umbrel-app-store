@@ -1,4 +1,4 @@
-# Manifesto Umbrel Community App do app de auditoria independente (TASK_V46 Bloco A).
+# Manifesto Umbrel Community App do app de auditoria independente.
 # CÓPIA DE REFERÊNCIA — a fonte que o Umbrel de fato lê é o repo público
 # github.com/bmfernandes/umbrel-app-store (bmfernandes-dev-audit/). Atualizar os dois em sincronia.
 manifestVersion: 1
@@ -7,37 +7,41 @@ name: Auditoria Independente
 tagline: Verificação contínua de fidelidade task↔código e integridade do host
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-dev-audit/icon.svg
 category: Developer Tools
-version: "0.1.3"
+version: "1.0.0"
 # `port` é obrigatório no schema do manifesto (zod, AppManifestSchema) mesmo sem UI —
-# este app não publica nada via app_proxy (sem serviço algum exposto no docker-compose.yml,
-# TASK_V46 A-1). Valor nominal, nunca de fato escutado por nada.
+# este app não publica nada via app_proxy (sem serviço algum exposto no docker-compose.yml).
+# Valor nominal, nunca de fato escutado por nada.
 port: 8900
 # Sem dashboard — path vazio (mesma convenção do app "ollama", headless, já instalado
 # neste Umbrel).
 path: ""
 description: >-
   Auditoria independente e contínua de dois tipos: fidelidade entre tasks aprovadas e o
-  código commitado (TASK_V40, classes D0-D6), e integridade de arquivos sensíveis do host
-  — sudoers de deploy e scripts de bootstrap — contra referência versionada (TASK_V46,
-  classe H1). Roda 24h, sem interface própria; o relatório é publicado no repositório do
-  projeto auditado pela máquina de desenvolvimento, nunca por este app.
+  código commitado (classes D0-D6), e integridade de arquivos sensíveis do host — sudoers
+  de deploy e scripts de bootstrap — contra referência versionada (classe H1). Roda 24h,
+  sem interface própria; o relatório é publicado no repositório do projeto auditado pela
+  máquina de desenvolvimento, nunca por este app.
 developer: BMFERNANDES
-website: https://github.com/bmfernandes/llm-gateway
+website: https://github.com/bmfernandes/dev-audit
 submitter: BMFERNANDES
-repo: https://github.com/bmfernandes/llm-gateway
-support: https://github.com/bmfernandes/llm-gateway/issues
+repo: https://github.com/bmfernandes/dev-audit
+support: https://github.com/bmfernandes/dev-audit/issues
 gallery: []
 releaseNotes: >-
-  v0.1.3 — corrige o horário-alvo do agendamento (A-3): disparava às 01h local em vez das
-  04h locais que o comentário original alegava (`HORA_ALVO_PADRAO=4` era 4h UTC, não 4h
-  local) — agora `HORA_ALVO_PADRAO=7` (UTC) = 04h America/Sao_Paulo de verdade. Verificado
-  ao vivo o loop sleep→dispara-sozinho (3 ciclos consecutivos sem intervenção manual).
-  v0.1.2 — corrige dois achados reais da v0.1.1: SSH recusava rodar pro UID 1000 sem
-  entrada em `/etc/passwd` ("No user exists for uid 1000"), e tentava gravar em
-  `~/.ssh/known_hosts` num filesystem `read_only`. v0.1.1 — corrige sincronização do
-  mirror git: a deploy key de leitura dedicada (3.2/C-3) nunca era usada de fato (faltava
-  `GIT_SSH_COMMAND`); clone/fetch agora autenticam com ela. v0.1.0 — primeira versão: verificação de integridade do host (sudoers de deploy + 4
-  scripts de bootstrap do llm-gateway contra a tag git implantada), sincronização de
-  leitura do mirror git, escrita do relatório local e agendamento próprio (4h + jitter).
-  Pipeline de fidelidade task↔código (herdado da TASK_V40) ainda não ligado a este app.
+  v0.1.4 — projeto extraído do `llm-gateway` pra repositório próprio (mesmo app Umbrel,
+  `bmfernandes-dev-audit`, mesmo comportamento — só o repositório de origem mudou).
+  Mecanismo de deploy sem senha (sudoers + scripts fixos) reconstruído do zero,
+  independente do `llm-gateway`. v0.1.3 — corrige o horário-alvo do agendamento:
+  disparava às 01h local em vez das 04h locais que o comentário original alegava
+  (`HORA_ALVO_PADRAO=4` era 4h UTC, não 4h local) — agora `HORA_ALVO_PADRAO=7` (UTC) = 04h
+  America/Sao_Paulo de verdade. Verificado ao vivo o loop sleep→dispara-sozinho (vários
+  ciclos consecutivos sem intervenção manual, inclusive resiliência a queda real do
+  container). v0.1.2 — corrige dois achados reais da v0.1.1: SSH recusava rodar pro UID
+  1000 sem entrada em `/etc/passwd`, e tentava gravar em `~/.ssh/known_hosts` num
+  filesystem `read_only`. v0.1.1 — corrige sincronização do mirror git: a deploy key de
+  leitura dedicada nunca era usada de fato (faltava `GIT_SSH_COMMAND`); clone/fetch agora
+  autenticam com ela. v0.1.0 — primeira versão: verificação de integridade do host,
+  sincronização de leitura do mirror git, escrita do relatório local e agendamento
+  próprio (4h + jitter). Pipeline de fidelidade task↔código (herdado da TASK_V40 do
+  llm-gateway) ainda não ligado a este app.
 dependencies: []
