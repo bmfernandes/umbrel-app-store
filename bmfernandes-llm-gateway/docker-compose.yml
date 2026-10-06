@@ -302,27 +302,20 @@ services:
       - /etc/avahi/avahi-daemon.conf:/host-etc/avahi/avahi-daemon.conf
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
 
-  # Deploy sem senha: reaplica os scripts fixos em /opt/<app>/bin e a regra de
-  # /etc/sudoers.d/<app>-deploy a cada boot, para TODOS os apps provisionados
-  # (TASK_V44 Fase 4: llm-gateway; TASK_V46: estendido para
-  # bmfernandes-dev-audit — mesmo container, mesmo mecanismo, novo bind-mount
-  # de diretório próprio; nenhum app toca no `dest_dir`/sudoers do outro, ver
-  # `entrypoint.sh`). Bind-mount de DIRETÓRIO inteiro (nunca arquivo único —
-  # TASK_V27: `rename()` sobre bind-mount de arquivo único dá `EBUSY`)
-  # dispensa `nsenter -m` por completo.
+  # Deploy sem senha: reaplica os scripts fixos em /opt/llm-gateway/bin e a
+  # regra de /etc/sudoers.d/umbrel-llm-gateway-deploy a cada boot (TASK_V44
+  # Fase 4). Entre 2026-10-04 e 2026-10-06 este container também provisionou o
+  # app bmfernandes-dev-audit (TASK_V46) — extraído pro repositório próprio
+  # (bmfernandes/dev-audit) em 2026-10-06, que ganhou seu próprio
+  # deploy_privs_bootstrap independente; o bind-mount extra e os host-files
+  # daquele app foram removidos daqui. Bind-mount de DIRETÓRIO inteiro (nunca
+  # arquivo único — TASK_V27: `rename()` sobre bind-mount de arquivo único dá
+  # `EBUSY`) dispensa `nsenter -m` por completo.
   deploy_privs_bootstrap:
-    # tag: llm-gateway-net-bootstrap-deploy-privs:v0.2.2 (TASK_V46 — extensão
-    # pra provisionar o app bmfernandes-dev-audit pelo mesmo mecanismo; v0.2.1
-    # remove o script `install.sh`/`apps.install.mutate` — a instalação do app
-    # é feita pela UI do Umbrel, nunca por CLI automatizada aqui, mesmo padrão
-    # já usado para o próprio llm-gateway; v0.2.2 corrige um gap real e
-    # pré-existente — desde a Fase 1 da TASK_V44 — nos dois wrappers
-    # `*-app-script-deploy.sh`: o `app-script` do `umbreld` deste host sempre
-    # exige `SCRIPT_APP_DATA_ROOTS`, que nenhum dos dois jamais definia) —
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica
     # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
     # subida, ver exceção 27decaa7 do SECURITY_GATE.md
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:3dd10137c8f077438ac3c9f02bf493e7014fe875aff1b98231660095015a29da
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:dd7437299e49faecef6cde2021c9cc9906c5bb2fc4903c34f02e6ca9f22d6058
     cap_drop:
       - ALL
     security_opt:
@@ -331,4 +324,3 @@ services:
     volumes:
       - /etc/sudoers.d:/etc/sudoers.d
       - /opt/llm-gateway/bin:/opt/llm-gateway/bin
-      - /opt/bmfernandes-dev-audit/bin:/opt/bmfernandes-dev-audit/bin
