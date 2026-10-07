@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.22.0"
+version: "0.22.1"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,6 +28,13 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
+  v0.22.1 — correção de um defeito que travava, em silêncio, o mecanismo de publicação
+  automática de atualizações (uma variável interna nunca tinha sido definida desde que o
+  endurecimento de segurança da versão anterior foi criado) — publicações futuras voltam a
+  funcionar normalmente. Pequenos reforços de robustez no mesmo endurecimento (mais provas
+  automáticas de que o componente dividido continua sem privilégio excessivo). O mecanismo de
+  auditoria independente, que antes vivia dentro deste app, passou a rodar como um app
+  separado e próprio — sem nenhuma mudança visível no funcionamento deste gateway.
   v0.22.0 — terceiro e último passo do endurecimento de segurança: o componente interno que
   reaplica configuração de rede e de publicação de atualizações deixa de ser um único
   "porteiro" com poder total sobre a máquina física (podia inspecionar qualquer outro
