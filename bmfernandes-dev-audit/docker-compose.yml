@@ -1,16 +1,13 @@
 # docker-compose do app Umbrel bmfernandes-dev-audit. Auditoria independente (herdada da
-# TASK_V40/TASK_V46 do llm-gateway) + verificação de integridade do host (classe H1),
-# rodando 24h no Beelink, nunca na máquina de dev. Projeto extraído do llm-gateway
+# TASK_V40/TASK_V46 do llm-gateway, hoje TASK_V01/TASK_V02 deste repo), rodando 24h no Beelink, nunca na máquina de dev. Projeto extraído do llm-gateway
 # (2026-10-05) — o app Umbrel em si é o MESMO (`bmfernandes-dev-audit`), só o repositório
 # de origem mudou.
 #
 # SEM app_proxy / porta publicada: este app não tem UI (dashboard de indicadores é tarefa
 # futura) — nada a expor ao app_proxy do Umbrel por ora.
 #
-# ACHADO EMPÍRICO (validação local, 2026-10-04, llm-gateway — ver P2 do contrato original):
-# usuário não-root com GID `0` (grupo `root`) lê o sudoers `0440 root:root` via permissão
-# de GRUPO comum do Unix, sem nenhuma capability — zero `cap_add`, `cap_drop: ALL` em
-# todos os serviços.
+# Zero `cap_add` e `cap_drop: ALL` em todos os serviços. O container é o limite do processo:
+# o runner não lê nem escreve nada do host além do volume do relatório.
 
 networks:
   default: {}
@@ -23,23 +20,21 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:d46a5596660ba67d1d97d0932b830ee7cd059eb6a0c9dd696b136cac55a3b93a
+    image: 127.0.0.1:8801/dev-audit@sha256:4d5a89d7699512099f1fbb808e20ae9506740ac2d17fb990022b047f6fa45a4e
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
     restart: unless-stopped
     # Usuário não-root (UID arbitrário, não precisa existir em /etc/passwd de lado nenhum
-    # — numérico basta) + GID 0 (grupo root) é suficiente pra ler o sudoers 0440 via
-    # permissão de grupo Unix comum. Testado e confirmado local: zero capabilities, zero
-    # setcap, zero binário extra.
+    # — numérico basta) + GID 0 (grupo root): o grupo que dá escrita ao volume do relatório e
+    # ao mirror (`0775`). Zero capabilities, zero setcap, zero binário extra.
     user: "1000:0"
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    # Estritamente somente-leitura sobre o host — filesystem do container travado; só os
-    # volumes abaixo (explicitamente read-write onde o PRÓPRIO app escreve: o mirror git
-    # e o diretório de relatório) permitem escrita.
+    # Filesystem do container travado; só os volumes abaixo (explicitamente read-write onde o
+    # PRÓPRIO app escreve: o mirror git e o diretório de relatório) permitem escrita.
     read_only: true
     tmpfs:
       - /tmp
@@ -47,50 +42,38 @@ services:
     # mesmo Beelink saturou a máquina, 670% CPU/46% RAM, travou 18 updates de apps em 1%).
     cpus: "0.50"
     mem_limit: 256m
+    # Credencial DEDICADA do pipeline no Gateway (AUDIT_GATEWAY_CLIENT_ID/SECRET), fora do git:
+    # o arquivo é criado no host pela sessão do llm-gateway; é o Docker (não o programa) que o
+    # lê ao subir o container. Ausente = o runner registra `credencial_ausente` e pula o
+    # pipeline (nunca cai para a credencial genérica).
+    env_file:
+      - path: ${APP_DATA_DIR}/gateway.env
+        required: false
     environment:
       - AUDIT_GATEWAY_URL=${AUDIT_GATEWAY_URL:-http://bmfernandes-llm-gateway_web_1:8800}
       - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-auditoria}
-      # PLACEHOLDER (ver app_runner.py): só llm-gateway, só host_integrity. O loop real de
-      # N projetos a partir de projetos.yml e o pipeline completo de triagem/confirmação
-      # (D0-D6) ainda não existem em código — sync/report_store/recovery já estão
-      # implementados e ligados, mas só pra este 1 projeto.
-      - AUDIT_PROJETO_NOME=llm-gateway
+      # O runner itera os projetos de /app/projetos.yml (dentro da imagem) e roda o pipeline
+      # D0-D6 (TASK_V05). Nada de um projeto específico no compose.
       - AUDIT_MIRROR_BASE_DIR=/app/projetos
       - AUDIT_REPORT_BASE_DIR=/audit-reports
-      # Deploy key de leitura dedicada — a URL em si não é segredo, mas a autenticação SSH
-      # (qual chave usar) é configuração de ambiente, lida por `sync.py` via
-      # `GIT_SSH_COMMAND`. A chave em si vem de ${APP_DATA_DIR}/deploy-keys (ro, abaixo),
-      # nome fixo = nome do projeto.
-      - AUDIT_LLM_GATEWAY_REMOTE_URL=${AUDIT_LLM_GATEWAY_REMOTE_URL:-git@github.com:bmfernandes/llm-gateway.git}
-      - AUDIT_LLM_GATEWAY_DEPLOY_KEY_PATH=/app/deploy-keys/llm-gateway
-      - AUDIT_LLM_GATEWAY_UMBREL_APP_YML=/host-artifacts/llm-gateway-umbrel-app.yml
     volumes:
       # --- Inventário e mirrors de leitura (dentro do app-data: re-clonável) ---
       # PRÉ-REQUISITO DE HOST: precisa existir com grupo `root` (GID 0) e `0775` — `git
       # fetch`/`merge` escreve dentro de `.git/` do mirror. Aplicado pelo wrapper
       # `bmfernandes-dev-audit-fix-perms.sh` (umbrel/net-bootstrap/deploy-privs/).
-      - ${APP_DATA_DIR}/projetos.yml:/app/projetos.yml:ro
       - ${APP_DATA_DIR}/projetos:/app/projetos
       # Deploy keys de leitura, uma por projeto inscrito — read-only, nunca escrita
       # (nenhuma credencial de escrita existe do lado Beelink).
       - ${APP_DATA_DIR}/deploy-keys:/app/deploy-keys:ro
 
-      # --- Relatório: FORA do app-data, direto no host, por projeto ---
+      # --- Relatório: a ÚNICA ligação do container com o host (o container é o limite) ---
+      # Os artefatos que o processo escreve (AUDIT_STATE.md e audit_state.json) entram como
+      # volume mapeado; o processo nunca lê nem escreve outro caminho do host.
       # PRÉ-REQUISITO DE HOST: este diretório (e `${APP_DATA_DIR}/projetos/<slug>/mirror/`,
       # que git fetch/merge também escreve) precisa existir com grupo `root` (GID 0) e bit
-      # de escrita de grupo (`0775`) — GID 0 é o domínio de privilégio deste app em leitura
-      # (sudoers) E escrita (relatório/mirror). Sem isso, `PermissionError` na primeira
-      # escrita/no primeiro `git fetch`.
+      # de escrita de grupo (`0775`). Sem isso, `PermissionError` na primeira escrita/no
+      # primeiro `git fetch`.
       - /home/umbrel/audit-reports:/audit-reports
-
-      # --- host_integrity: artefatos reais do host (do llm-gateway, projeto auditado), somente-leitura ---
-      # Mesmo path dentro e fora do container — `host_integrity.ARTEFATOS_LLM_GATEWAY` tem
-      # os caminhos host hardcoded, então o container precisa vê-los no MESMO lugar.
-      - /etc/sudoers.d/umbrel-llm-gateway-deploy:/etc/sudoers.d/umbrel-llm-gateway-deploy:ro
-      - /opt/llm-gateway/bin:/opt/llm-gateway/bin:ro
-      # Versão DE FATO implantada do llm-gateway — lê `version:` do manifesto já copiado
-      # pro app-data dele, nunca o `HEAD` do branch padrão.
-      - /home/umbrel/umbrel/app-data/bmfernandes-llm-gateway/umbrel-app.yml:/host-artifacts/llm-gateway-umbrel-app.yml:ro
     networks:
       - default
       - umbrel_main_network
