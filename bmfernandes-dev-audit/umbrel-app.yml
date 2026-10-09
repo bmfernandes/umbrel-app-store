@@ -7,7 +7,7 @@ name: Auditoria Independente
 tagline: Verificação contínua de fidelidade task↔código
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-dev-audit/icon.svg
 category: Developer Tools
-version: "1.1.4"
+version: "1.1.5"
 # `port` é obrigatório no schema do manifesto (zod, AppManifestSchema) mesmo sem UI —
 # este app não publica nada via app_proxy (sem serviço algum exposto no docker-compose.yml).
 # Valor nominal, nunca de fato escutado por nada.
@@ -27,7 +27,7 @@ repo: https://github.com/bmfernandes/dev-audit
 support: https://github.com/bmfernandes/dev-audit/issues
 gallery: []
 releaseNotes: >-
-  v1.1.4 — correções da revisão da V05: marca da rotação, cursor persistido mesmo se a notificação falhar, validação do inventário e do relatório, cursor vazio aceito até o primeiro ciclo executado. v1.1.3 — o fallback da triagem para o tier `floor` passa a vir ligado por padrão (como no
+  v1.1.5 — o log passa a sair em JSON estruturado (com correlation_id) e os erros tratados antes silenciosos passam a ser registrados. v1.1.4 — correções da revisão da V05: marca da rotação, cursor persistido mesmo se a notificação falhar, validação do inventário e do relatório, cursor vazio aceito até o primeiro ciclo executado. v1.1.3 — o fallback da triagem para o tier `floor` passa a vir ligado por padrão (como no
   mecanismo antigo). v1.1.2 — prazo padrão do ciclo passa de 45 para 10 minutos (fixo no código, nesta fase de
   testes). v1.1.1 — histórico de cada ciclo ganha o tempo gasto na confirmação (`tempo_confirmacao_segundos`)
   e o número de issues gravadas (`entradas_geradas`); commit só de documentação (`.md` ou `docs/`)
