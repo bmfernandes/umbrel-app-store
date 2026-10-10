@@ -3,8 +3,9 @@
 # (2026-10-05) — o app Umbrel em si é o MESMO (`bmfernandes-dev-audit`), só o repositório
 # de origem mudou.
 #
-# SEM app_proxy / porta publicada: este app não tem UI (dashboard de indicadores é tarefa
-# futura) — nada a expor ao app_proxy do Umbrel por ora.
+# UI (TASK_V04): serviço `ui` com o dashboard aberto de indicadores, exposto pelo proxy do
+# Umbrel (bloco `app_proxy` abaixo, sem login do Umbrel: a proteção de alterações é a senha da
+# TASK_V08). Somente leitura: nenhum volume gravável, nenhuma chave, nenhum acesso a git ou rede.
 #
 # Zero `cap_add` e `cap_drop: ALL` em todos os serviços. O container é o limite do processo:
 # o runner não lê nem escreve nada do host além do volume do relatório.
@@ -20,7 +21,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:23b56d827eba085d8b4b3bbb9564ee57d5f886424ec230e09a250cdb239867d4
+    image: 127.0.0.1:8801/dev-audit@sha256:f427ad27e503e30d9d99e7a055a745c5a7cf50ca14e3e66ba333c11dfe85a97e
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -78,6 +79,61 @@ services:
       - default
       - umbrel_main_network
 
+  # Dashboard aberto (TASK_V04). Mesma imagem do runner (um digest, uma publicação) com o
+  # `entrypoint` trocado para o uvicorn; processo único (`--workers 1`). Nas redes `default` e
+  # `umbrel_main_network`, como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada).
+  # Os dois volumes entram somente leitura (A-3): o relatório que o runner grava e o mirror,
+  # de onde sai o lado "main" do indicador de atraso.
+  ui:
+    image: 127.0.0.1:8801/dev-audit@sha256:f427ad27e503e30d9d99e7a055a745c5a7cf50ca14e3e66ba333c11dfe85a97e
+    entrypoint:
+      - python3
+      - -m
+      - uvicorn
+      - ui_app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8900"
+      - --workers
+      - "1"
+    restart: unless-stopped
+    user: "1000:0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cpus: "0.25"
+    mem_limit: 128m
+    environment:
+      - AUDIT_MIRROR_BASE_DIR=/app/projetos
+      - AUDIT_REPORT_BASE_DIR=/audit-reports
+    volumes:
+      - ${APP_DATA_DIR}/projetos:/app/projetos:ro
+      - /home/umbrel/audit-reports:/audit-reports:ro
+    # A imagem não tem curl nem wget: o healthcheck usa o próprio Python.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8900/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - default
+      - umbrel_main_network
+
+  # Proxy do Umbrel: nesta versão do umbrelOS o `app-script` remove este serviço do compose que
+  # executa e grava estas variáveis em `app-gateway.json`; o proxy em si é o `umbreld`, no host.
+  # APP_HOST = <id-completo-do-app>_<serviço>_1; sem login do Umbrel (PROXY_AUTH_ADD "false").
+  app_proxy:
+    environment:
+      APP_HOST: bmfernandes-dev-audit_ui_1
+      APP_PORT: 8900
+      PROXY_AUTH_ADD: "false"
+
   # Deploy sem senha: reaplica os scripts fixos em /opt/bmfernandes-dev-audit/bin e a
   # regra de /etc/sudoers.d/bmfernandes-dev-audit-deploy a cada boot. Mecanismo próprio,
   # independente do llm-gateway (mesmo padrão, TASK_V44 Fase 4 daquele repo —
@@ -88,7 +144,7 @@ services:
   deploy_privs_bootstrap:
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica esta tag
     # determina o conteúdo de /etc/sudoers.d/ do host na próxima subida.
-    image: 127.0.0.1:8801/dev-audit-net-bootstrap-deploy-privs@sha256:0c921bf03a29f4f82ab33760868436cdeb1921d6d34fdf96c906c731ff30fd6f
+    image: 127.0.0.1:8801/dev-audit-net-bootstrap-deploy-privs@sha256:88897b11f562421bc677fed02d600da03c6a91872e505dab5b1b4c3bc81b04b2
     cap_drop:
       - ALL
     security_opt:
