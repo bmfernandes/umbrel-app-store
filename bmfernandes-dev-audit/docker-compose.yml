@@ -21,7 +21,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:f427ad27e503e30d9d99e7a055a745c5a7cf50ca14e3e66ba333c11dfe85a97e
+    image: 127.0.0.1:8801/dev-audit@sha256:66e206bd2fbb1475db1209b4ac5ffa6a473d05d7629e09798a2be6d50ae0b5f6
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -85,7 +85,7 @@ services:
   # Os dois volumes entram somente leitura (A-3): o relatório que o runner grava e o mirror,
   # de onde sai o lado "main" do indicador de atraso.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:f427ad27e503e30d9d99e7a055a745c5a7cf50ca14e3e66ba333c11dfe85a97e
+    image: 127.0.0.1:8801/dev-audit@sha256:66e206bd2fbb1475db1209b4ac5ffa6a473d05d7629e09798a2be6d50ae0b5f6
     entrypoint:
       - python3
       - -m
