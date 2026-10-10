@@ -3,7 +3,7 @@
 # github.com/bmfernandes/umbrel-app-store (bmfernandes-dev-audit/). Atualizar os dois em sincronia.
 manifestVersion: 1
 id: bmfernandes-dev-audit
-name: Auditoria Independente
+name: DEV Audit
 tagline: Verificação contínua de fidelidade task↔código
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-dev-audit/icon.svg
 category: Developer Tools
