@@ -8,7 +8,7 @@
 # TASK_V08). Somente leitura: nenhum volume gravável, nenhuma chave, nenhum acesso a git ou rede.
 #
 # Zero `cap_add` e `cap_drop: ALL` em todos os serviços. O container é o limite do processo:
-# o runner não lê nem escreve nada do host além do volume do relatório.
+# o runner não lê nem escreve nada do host além do volume do relatório e do cadastro (só leitura).
 
 networks:
   default: {}
@@ -21,7 +21,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:4f18e2fb0f7b6abc52c56a7b24cf7514fdf215b120dc5d2f27077915807dcf5a
+    image: 127.0.0.1:8801/dev-audit@sha256:5cfcabd4410a9df68422ada4a8a667063813889744df371cbfb234c1fff24fa4
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -43,13 +43,10 @@ services:
     # mesmo Beelink saturou a máquina, 670% CPU/46% RAM, travou 18 updates de apps em 1%).
     cpus: "0.50"
     mem_limit: 256m
-    # Credencial DEDICADA do pipeline no Gateway (AUDIT_GATEWAY_CLIENT_ID/SECRET), fora do git:
-    # o arquivo é criado no host pela sessão do llm-gateway; é o Docker (não o programa) que o
-    # lê ao subir o container. Ausente = o runner registra `credencial_ausente` e pula o
+    # A credencial DEDICADA do pipeline no Gateway não vem por variável de ambiente nem por
+    # `env_file`: o runner a lê a cada ciclo do `cadastro.json` do volume `/app/cadastro`
+    # (Emenda V08-1). Ausente ou inválida = o runner registra `credencial_ausente` e pula o
     # pipeline (nunca cai para a credencial genérica).
-    env_file:
-      - path: ${APP_DATA_DIR}/gateway.env
-        required: false
     environment:
       - AUDIT_GATEWAY_URL=${AUDIT_GATEWAY_URL:-http://bmfernandes-llm-gateway_web_1:8800}
       - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-auditoria}
@@ -57,6 +54,9 @@ services:
       # D0-D6 (TASK_V05). Nada de um projeto específico no compose.
       - AUDIT_MIRROR_BASE_DIR=/app/projetos
       - AUDIT_REPORT_BASE_DIR=/audit-reports
+      # Parametrização da cadência (variável que o código já lê): 600 s de espera depois de cada
+      # ciclo, que tem prazo próprio de 10 min (`AUDIT_DEADLINE_MINUTOS`): roda, descansa, roda.
+      - AUDIT_INTERVALO_TESTE_SEGUNDOS=600
     volumes:
       # --- Inventário e mirrors de leitura (dentro do app-data: re-clonável) ---
       # PRÉ-REQUISITO DE HOST: precisa existir com grupo `root` (GID 0) e `0775` — `git
@@ -66,10 +66,14 @@ services:
       # Deploy keys de leitura, uma por projeto inscrito — read-only, nunca escrita
       # (nenhuma credencial de escrita existe do lado Beelink).
       - ${APP_DATA_DIR}/deploy-keys:/app/deploy-keys:ro
+      # Cadastro (credencial do Gateway), somente leitura: pasta real do host, que sobrevive à
+      # recriação do container. PRÉ-REQUISITO DE HOST: a pasta é criada antes, dono `umbrel`,
+      # modo 0700, com o `cadastro.json` em 0600 (se o Docker a criar, nasce `root:root`).
+      - ${APP_DATA_DIR}/cadastro:/app/cadastro:ro
 
-      # --- Relatório: a ÚNICA ligação do container com o host (o container é o limite) ---
+      # --- Relatório: o único volume que o processo escreve (o container é o limite) ---
       # Os artefatos que o processo escreve (AUDIT_STATE.md e audit_state.json) entram como
-      # volume mapeado; o processo nunca lê nem escreve outro caminho do host.
+      # volume mapeado; além dele, o processo só lê o cadastro (volume acima, somente leitura).
       # PRÉ-REQUISITO DE HOST: este diretório (e `${APP_DATA_DIR}/projetos/<slug>/mirror/`,
       # que git fetch/merge também escreve) precisa existir com grupo `root` (GID 0) e bit
       # de escrita de grupo (`0775`). Sem isso, `PermissionError` na primeira escrita/no
@@ -85,7 +89,7 @@ services:
   # Os dois volumes entram somente leitura (A-3): o relatório que o runner grava e o mirror,
   # de onde sai o lado "main" do indicador de atraso.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:4f18e2fb0f7b6abc52c56a7b24cf7514fdf215b120dc5d2f27077915807dcf5a
+    image: 127.0.0.1:8801/dev-audit@sha256:5cfcabd4410a9df68422ada4a8a667063813889744df371cbfb234c1fff24fa4
     entrypoint:
       - python3
       - -m
