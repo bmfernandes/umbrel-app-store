@@ -8,7 +8,7 @@
 # TASK_V08). Somente leitura: nenhum volume gravável, nenhuma chave, nenhum acesso a git ou rede.
 #
 # Zero `cap_add` e `cap_drop: ALL` em todos os serviços. O container é o limite do processo:
-# o runner não lê nem escreve nada do host além do volume do relatório e do cadastro (só leitura).
+# o runner só lê do host o cadastro (somente leitura) e só escreve no relatório e no espelho git.
 
 networks:
   default: {}
@@ -21,7 +21,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:5cfcabd4410a9df68422ada4a8a667063813889744df371cbfb234c1fff24fa4
+    image: 127.0.0.1:8801/dev-audit@sha256:c8cb88c8225d28ea18b3c4a68b26fc211e01ff3c53ad3daa3ccd50732843ff25
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -71,7 +71,7 @@ services:
       # modo 0700, com o `cadastro.json` em 0600 (se o Docker a criar, nasce `root:root`).
       - ${APP_DATA_DIR}/cadastro:/app/cadastro:ro
 
-      # --- Relatório: o único volume que o processo escreve (o container é o limite) ---
+      # --- Relatório: o volume que o processo escreve, além do espelho git dos projetos (o container é o limite) ---
       # Os artefatos que o processo escreve (AUDIT_STATE.md e audit_state.json) entram como
       # volume mapeado; além dele, o processo só lê o cadastro (volume acima, somente leitura).
       # PRÉ-REQUISITO DE HOST: este diretório (e `${APP_DATA_DIR}/projetos/<slug>/mirror/`,
@@ -89,7 +89,7 @@ services:
   # Os dois volumes entram somente leitura (A-3): o relatório que o runner grava e o mirror,
   # de onde sai o lado "main" do indicador de atraso.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:5cfcabd4410a9df68422ada4a8a667063813889744df371cbfb234c1fff24fa4
+    image: 127.0.0.1:8801/dev-audit@sha256:c8cb88c8225d28ea18b3c4a68b26fc211e01ff3c53ad3daa3ccd50732843ff25
     entrypoint:
       - python3
       - -m
