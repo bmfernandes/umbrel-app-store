@@ -3,9 +3,10 @@
 # (2026-10-05) — o app Umbrel em si é o MESMO (`bmfernandes-dev-audit`), só o repositório
 # de origem mudou.
 #
-# UI (TASK_V04): serviço `ui` com o dashboard aberto de indicadores, exposto pelo proxy do
-# Umbrel (bloco `app_proxy` abaixo, sem login do Umbrel: a proteção de alterações é a senha da
-# TASK_V08). Somente leitura: nenhum volume gravável, nenhuma chave, nenhum acesso a git ou rede.
+# UI (TASK_V04 e TASK_V08): serviço `ui` com o dashboard aberto de indicadores e a área de
+# configurações com senha própria, exposto pelo proxy do Umbrel (bloco `app_proxy` abaixo, sem
+# login do Umbrel). Só o volume `cadastro` é gravável; nenhuma chave de projeto, nenhum acesso a
+# git ou rede.
 #
 # Zero `cap_add` e `cap_drop: ALL` em todos os serviços. O container é o limite do processo:
 # o runner só lê do host o cadastro (somente leitura) e só escreve no relatório e no espelho git.
@@ -21,7 +22,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:c8cb88c8225d28ea18b3c4a68b26fc211e01ff3c53ad3daa3ccd50732843ff25
+    image: 127.0.0.1:8801/dev-audit@sha256:4b053664f092ff6ce280bab2d698fa387431e167012187f5b6a418285017709c
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -83,13 +84,13 @@ services:
       - default
       - umbrel_main_network
 
-  # Dashboard aberto (TASK_V04). Mesma imagem do runner (um digest, uma publicação) com o
-  # `entrypoint` trocado para o uvicorn; processo único (`--workers 1`). Nas redes `default` e
-  # `umbrel_main_network`, como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada).
-  # Os dois volumes entram somente leitura (A-3): o relatório que o runner grava e o mirror,
-  # de onde sai o lado "main" do indicador de atraso.
+  # Dashboard aberto (TASK_V04) e área de configurações com senha (TASK_V08). Mesma imagem do
+  # runner (um digest, uma publicação) com o `entrypoint` trocado para o uvicorn; processo único
+  # (`--workers 1`, sessão e limitador em memória). Nas redes `default` e `umbrel_main_network`,
+  # como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada). O relatório e o
+  # mirror entram somente leitura (V04 A-3); só o `cadastro` é gravável.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:c8cb88c8225d28ea18b3c4a68b26fc211e01ff3c53ad3daa3ccd50732843ff25
+    image: 127.0.0.1:8801/dev-audit@sha256:4b053664f092ff6ce280bab2d698fa387431e167012187f5b6a418285017709c
     entrypoint:
       - python3
       - -m
@@ -118,6 +119,10 @@ services:
     volumes:
       - ${APP_DATA_DIR}/projetos:/app/projetos:ro
       - /home/umbrel/audit-reports:/audit-reports:ro
+      # Cadastro com escrita (TASK_V08, Fatia 3): único volume gravável da `ui`, onde a área de
+      # configurações edita a credencial do Gateway e guarda o hash da senha (`ui_senha.json`).
+      # O `runner` o monta `:ro`. PRÉ-REQUISITO DE HOST: pasta dono `umbrel` (uid 1000), modo 0700.
+      - ${APP_DATA_DIR}/cadastro:/app/cadastro
     # A imagem não tem curl nem wget: o healthcheck usa o próprio Python.
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8005/health', timeout=3)"]
