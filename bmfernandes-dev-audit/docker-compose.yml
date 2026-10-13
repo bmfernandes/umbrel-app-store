@@ -22,7 +22,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:4b053664f092ff6ce280bab2d698fa387431e167012187f5b6a418285017709c
+    image: 127.0.0.1:8801/dev-audit@sha256:b855e374ddaa3dd733aed02f42c003d5113c7bcbd3d353ccbde51abcfc5f2981
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -90,7 +90,7 @@ services:
   # como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada). O relatório e o
   # mirror entram somente leitura (V04 A-3); só o `cadastro` é gravável.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:4b053664f092ff6ce280bab2d698fa387431e167012187f5b6a418285017709c
+    image: 127.0.0.1:8801/dev-audit@sha256:b855e374ddaa3dd733aed02f42c003d5113c7bcbd3d353ccbde51abcfc5f2981
     entrypoint:
       - python3
       - -m
