@@ -36,6 +36,11 @@ services:
   # release que bumpa as tags de web/agy_bridge/claude_bridge — abriria uma janela de pull sem
   # nenhum registry de pe.
   registry:
+    # container_name FIXO em todos os servicos (Emenda V05 da TASK_V38, Bloco J): o umbreld
+    # (patchComposeFile, app.ts) grava `<app>_<servico>_1` em todo servico sem container_name, e
+    # o nosso /deploy sobe pelo Compose v2 (`<app>-<servico>-1`). Declarar o nome do umbreld
+    # aqui faz os dois escritores produzirem o mesmo nome, sem alias nem hipotese de reinicio.
+    container_name: bmfernandes-llm-gateway_registry_1
     image: registry:2
     restart: unless-stopped
     stop_grace_period: 30s
@@ -60,6 +65,7 @@ services:
   # Proxy reverso do framework Umbrel: publica a `port:` do manifesto e repassa para o gateway.
   # É ele que faz o ícone do dashboard abrir. APP_HOST = nome do serviço do gateway; APP_PORT = 8800.
   app_proxy:
+    container_name: bmfernandes-llm-gateway_app_proxy_1
     environment:
       # APP_HOST = <id-completo-do-app>_<service>_1 (id inclui o prefixo da store, TASK_V23)
       APP_HOST: bmfernandes-llm-gateway_web_1
@@ -69,6 +75,7 @@ services:
       PROXY_AUTH_ADD: "false"
 
   web:
+    container_name: bmfernandes-llm-gateway_web_1
     # Registry Docker privado no proprio Beelink (TASK_V26), nao mais GHCR. 127.0.0.1
     # (loopback) porque o pull acontece no MESMO host onde o registry roda — Docker trata
     # 127.0.0.0/8 como inseguro por padrao, sem exigir insecure-registries no daemon.json
@@ -168,6 +175,7 @@ services:
   # Como containers do próprio app (definição vive em /home, comprovadamente persistente e
   # subida automaticamente pelo umbreld), a recuperação pós-reboot passa a ser autônoma.
   agy_bridge:
+    container_name: bmfernandes-llm-gateway_agy_bridge_1
     # tag: llm-gateway-bridges:v0.21.4 (Emenda V04 da TASK_V27 -- --output-format json,
     # elimina vazamento de raciocinio interno do agy; mesma imagem de claude_bridge)
     image: 127.0.0.1:8801/llm-gateway-bridges@sha256:8e89d51f619ce7317d2323ecabeebdda479dc2108f7ef79e2843e03a25313b14
@@ -213,6 +221,7 @@ services:
       start_period: 10s
 
   claude_bridge:
+    container_name: bmfernandes-llm-gateway_claude_bridge_1
     # tag: llm-gateway-bridges:v0.21.4 (Emenda V04 da TASK_V27 -- --output-format json,
     # elimina vazamento de raciocinio interno do agy; mesma imagem de agy_bridge)
     image: 127.0.0.1:8801/llm-gateway-bridges@sha256:8e89d51f619ce7317d2323ecabeebdda479dc2108f7ef79e2843e03a25313b14
@@ -274,6 +283,7 @@ services:
   # `nsenter -m -- systemctl` — confirmado por probe real (Fase 0) que
   # `RestartUnit` funciona de dentro de um container `cap_drop: [ALL]`.
   mdns_bootstrap:
+    container_name: bmfernandes-llm-gateway_mdns_bootstrap_1
     # tag: llm-gateway-net-bootstrap-mdns:v0.1.0 (TASK_V44 Fase 4)
     image: 127.0.0.1:8801/llm-gateway-net-bootstrap-mdns@sha256:bf3acab7857b00b5ef1e2cbba1187cf3584f6d82c41880c6e7b468485ee5e93c
     network_mode: host
@@ -296,6 +306,7 @@ services:
   # arquivo único — TASK_V27: `rename()` sobre bind-mount de arquivo único dá
   # `EBUSY`) dispensa `nsenter -m` por completo.
   deploy_privs_bootstrap:
+    container_name: bmfernandes-llm-gateway_deploy_privs_bootstrap_1
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica
     # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
     # subida, ver exceção 27decaa7 do SECURITY_GATE.md
