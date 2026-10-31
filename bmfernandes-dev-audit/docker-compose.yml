@@ -22,7 +22,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:83dc4e8587b13b733726604974fe1fd306029f761483d534d061cf42b892e1d8
+    image: 127.0.0.1:8801/dev-audit@sha256:eba30f00ce0dcb890bd0129a3b5afc706fc68fdad6b73c40a71086f447b8161e
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -58,6 +58,9 @@ services:
       # Parametrização da cadência (variável que o código já lê): 600 s de espera depois de cada
       # ciclo, que tem prazo próprio de 10 min (`AUDIT_DEADLINE_MINUTOS`): roda, descansa, roda.
       - AUDIT_INTERVALO_TESTE_SEGUNDOS=600
+      # Teto de caracteres do prompt final de cada chamada ao Gateway (TASK_V05, emenda 2026-10-24): pacote maior que
+      # isto é dividido antes do envio. O Gateway responde 503 acima de cerca de 25 mil.
+      - AUDIT_TETO_CARACTERES_PACOTE=${AUDIT_TETO_CARACTERES_PACOTE:-20000}
     volumes:
       # --- Inventário e mirrors de leitura (dentro do app-data: re-clonável) ---
       # PRÉ-REQUISITO DE HOST: precisa existir com grupo `root` (GID 0) e `0775` — `git
@@ -90,7 +93,7 @@ services:
   # como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada). O relatório e o
   # mirror entram somente leitura (V04 A-3); só o `cadastro` é gravável.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:83dc4e8587b13b733726604974fe1fd306029f761483d534d061cf42b892e1d8
+    image: 127.0.0.1:8801/dev-audit@sha256:eba30f00ce0dcb890bd0129a3b5afc706fc68fdad6b73c40a71086f447b8161e
     entrypoint:
       - python3
       - -m
