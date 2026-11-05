@@ -82,8 +82,8 @@ services:
     # do umbrelOS (o achado da TASK_V23 era sobre credencial, nao TLS). Publicacao via
     # /publicar-umbrel (TASK_V05), manual, apos CI verde + tag. Trocar o digest a cada
     # release (TASK_V43) — a tag em comentario na linha acima e so referencia legivel.
-    # tag: llm-gateway:v0.23.1
-    image: 127.0.0.1:8801/llm-gateway@sha256:8840375bea7695fe40cf7e03cd9bf13a9c6e5b4b17388ffb23e74483296ac7fd
+    # tag: llm-gateway:v0.24.0
+    image: 127.0.0.1:8801/llm-gateway@sha256:d3004115cb6c43e7ed1131842e04d31c15b638bff43fb096130a366d836555e6
     restart: on-failure
     # 1m era suficiente para o antigo antigravity_bridge_timeout=100s; com o valor subido para
     # 420s (fix do timeout curto da ponte agy, 2026-08-25 — cobre as 3 tentativas da ponte, nao
@@ -92,11 +92,17 @@ services:
     # antes dela ter chance de terminar num stop/restart do container — subido junto para ficar
     # acima do novo teto. INVARIANTE: precisa continuar MAIOR que settings.yaml::antigravity_bridge_timeout
     # (testado em tests/test_settings_yaml.py).
-    stop_grace_period: 430s
+    # TASK_V51 (P12): 480s (era 430s, nao multiplo de 60). Nao precisa cobrir a cadeia
+    # `ultra` -> `super` (1500s de HTTP): numa parada do `web` a chamada em andamento e
+    # cancelada e a ponte limpa o processo (CA-12), entao este prazo so tem de bastar para
+    # esse cancelamento.
+    stop_grace_period: 480s
     depends_on:
       agy_bridge:
         condition: service_healthy
       claude_bridge:
+        condition: service_healthy
+      codex_bridge:
         condition: service_healthy
     # Achado real (2026-07-12): o container não herda a resolução MagicDNS do host por
     # padrão (gotcha comum de Docker + Tailscale) — hostname de outra máquina da tailnet
@@ -142,6 +148,9 @@ services:
       # mesma rede do compose, endereçados por nome — não mais host.docker.internal.
       - ANTIGRAVITY_BRIDGE_URL=${ANTIGRAVITY_BRIDGE_URL:-http://agy_bridge:8802}
       - CLAUDE_BRIDGE_URL=${CLAUDE_BRIDGE_URL:-http://claude_bridge:8803}
+      # Ponte do Codex (TASK_V51): tiers ultra/super/max. Sem token: o controle de acesso
+      # vive no gateway; a ponte so esta na rede `default` deste compose.
+      - CODEX_BRIDGE_URL=${CODEX_BRIDGE_URL:-http://codex_bridge:8804}
       # Segredos: o instalador do Umbrel (Community App Store) NÃO tem formulário de env
       # vars (confirmado por leitura de código — `docker-pull.ts` do `umbreld` usa
       # dockerode puro, e o mecanismo nativo `exports.sh` depende de estado interno do
@@ -270,6 +279,50 @@ services:
     # compartilhada). Anexar esta ponte à rede compartilhada tornaria /credencial
     # alcançável por qualquer app de terceiro do Umbrel.
 
+  # Ponte do Codex CLI (TASK_V51): tiers ultra/super/max. Mesma imagem das outras pontes.
+  # O `codex` autentica por login de conta em `~/.codex/auth.json` (`codex login
+  # --device-auth` feito no PROPRIO Beelink; nunca copiar o arquivo do computador de
+  # desenvolvimento, que o usuario continua usando). O diretorio inteiro e bind-mounted
+  # read-write: o CLI renova o login sozinho (rename atomico, nunca montar o arquivo
+  # isolado) e se autoatualiza dentro dele; o binario e achado pela ponte em
+  # `$CODEX_HOME/packages/standalone`.
+  codex_bridge:
+    container_name: bmfernandes-llm-gateway_codex_bridge_1
+    # tag: llm-gateway-bridges:v0.24.0 (traz a codex_bridge.py; agy_bridge e claude_bridge
+    # ficam na imagem v0.21.4 ate a Fase 3 remover o agy -- nao recriar o que nao mudou)
+    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:b1b7711ec4c1feade4f4b83e9722d0212fd24b28fd0687b0d393af4e0866fbc5
+    command: ["uvicorn", "codex_bridge:app", "--host", "0.0.0.0", "--port", "8804"]
+    # init: true evita zumbis dos subprocessos codex (mesma razao das outras pontes).
+    init: true
+    restart: on-failure
+    # Mesmo uid do usuario `umbrel` no host (Fase 0 mostrou que como root o container cria
+    # arquivos de root em ~/.codex e impede o `codex` do host de escrever neles). HOME em
+    # /tmp porque este uid nao tem diretorio pessoal na imagem.
+    user: "1000:1000"
+    environment:
+      - CODEX_HOME=/codex
+      - HOME=/tmp
+    # Maior que o teto de 900s do subprocesso (settings.yaml::codex_subprocess_timeout_ultra)
+    # mais a margem de 60s da parada da ponte: um deploy so da codex_bridge espera a chamada
+    # em andamento terminar (CA-04, CA-12). O padrao de 10s mataria o `ultra` a cada deploy.
+    stop_grace_period: 960s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /home/umbrel/.codex:/codex
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8804/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # INVARIANTE DE SEGURANÇA (TASK_V51, CA-14) — não anexar `codex_bridge` à rede
+    # `umbrel_main_network` nem publicar `ports:`: a ponte nao tem token e GET /credencial
+    # e sem autenticacao de proposito (metadados fechados, sem token), como na claude_bridge.
+    # So o `web` alcanca esta ponte, pela rede `default` deste compose.
+
   # TASK_V44 Fase 4: o antigo container único e privilegiado (`net_bootstrap`,
   # `pid: host` + SYS_ADMIN/SYS_PTRACE/SYS_CHROOT + apparmor:unconfined) foi
   # dividido em dois serviços de privilégio mínimo e disjunto — nenhum dos
@@ -310,7 +363,7 @@ services:
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica
     # esta tag determina o conteúdo de /etc/sudoers.d/ do host na próxima
     # subida, ver exceção 27decaa7 do SECURITY_GATE.md
-    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:dd7437299e49faecef6cde2021c9cc9906c5bb2fc4903c34f02e6ca9f22d6058
+    image: 127.0.0.1:8801/llm-gateway-net-bootstrap-deploy-privs@sha256:29329169d9910e769fc043b5590ed33db7c4fc52610215a5e574282459cb9867
     cap_drop:
       - ALL
     security_opt:

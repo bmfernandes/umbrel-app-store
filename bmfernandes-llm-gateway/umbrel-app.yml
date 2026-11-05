@@ -8,7 +8,7 @@ tagline: Inference-broker do homelab — gateway de texto OpenAI-compatible
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-llm-gateway/icon.svg
 category: Developer Tools
 # Casa com a versão do projeto (SemVer). Atualizar a cada release empacotado.
-version: "0.23.1"
+version: "0.24.0"
 # Porta pública que o app_proxy escuta no host (faixa 80xx = app com UI, convenção AGENTS.md).
 # O gateway-API interno segue em 8800 (88xx infra); o app_proxy faz proxy 8004 -> web:8800.
 # AJUSTAR se colidir com outro app no Beelink (decisão empírica no deploy).
@@ -28,6 +28,13 @@ repo: https://github.com/bmfernandes/llm-gateway
 support: https://github.com/bmfernandes/llm-gateway/issues
 gallery: []
 releaseNotes: >-
+  v0.24.0 — os três níveis de maior qualidade do gateway (ultra, super e max) deixam de usar
+  o Gemini e o GPT-OSS e passam a usar três modelos da OpenAI (GPT-6 Astra, GPT-6.1 Sol e
+  GPT-6.1 Terra) por uma ponte nova, ligada à assinatura ChatGPT Plus. A ordem de queda
+  entre níveis continua exatamente a mesma; o que muda são os tempos de espera, bem maiores,
+  porque esses modelos pensam mais antes de responder. O painel de status passa a mostrar a
+  situação do login dessa nova ponte. A ponte antiga continua instalada por enquanto e sai
+  numa versão seguinte.
   v0.23.1 — os nomes dos containers do app passam a ser fixos no padrão do próprio Umbrel
   (antes mudavam conforme quem escreveu a configuração por último, o que quebrava o
   script que renova a credencial do Claude no tier de maior qualidade). O script de
