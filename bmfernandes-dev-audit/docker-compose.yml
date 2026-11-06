@@ -22,7 +22,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit:v1.5.0@sha256:cfe9ccc39bab2398753551e2d6c30beb98c14f57f9a46998843302e8a479faa4
+    image: 127.0.0.1:8801/dev-audit:v1.5.1@sha256:0477db67c76ad2d5b0cd69faba06317dc4234cd340bb845ada81d40dcebda7c6
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -63,7 +63,7 @@ services:
       - AUDIT_TETO_CARACTERES_PACOTE=${AUDIT_TETO_CARACTERES_PACOTE:-20000}
       # Tier com que o ciclo começa (emenda V05-2026-11-05): `low` (padrão) ou `floor` para
       # pular direto ao fallback quando o tier `low` está degradado de forma persistente.
-      - AUDIT_TRIAGEM_TIER_INICIAL=floor
+      - AUDIT_TRIAGEM_TIER_INICIAL=low
     volumes:
       # --- Inventário e mirrors de leitura (dentro do app-data: re-clonável) ---
       # PRÉ-REQUISITO DE HOST: precisa existir com grupo `root` (GID 0) e `0775` — `git
@@ -96,7 +96,7 @@ services:
   # como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada). O relatório e o
   # mirror entram somente leitura (V04 A-3); só o `cadastro` é gravável.
   ui:
-    image: 127.0.0.1:8801/dev-audit:v1.5.0@sha256:cfe9ccc39bab2398753551e2d6c30beb98c14f57f9a46998843302e8a479faa4
+    image: 127.0.0.1:8801/dev-audit:v1.5.1@sha256:0477db67c76ad2d5b0cd69faba06317dc4234cd340bb845ada81d40dcebda7c6
     entrypoint:
       - python3
       - -m
