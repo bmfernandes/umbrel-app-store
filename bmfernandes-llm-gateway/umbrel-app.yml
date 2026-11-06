@@ -17,8 +17,8 @@ port: 8004
 path: "/dashboard"
 description: >-
   Gateway de inferência de texto do homelab, compatível com a API OpenAI. Roteia por uma
-  escada de tiers de qualidade que só desce (Groq em produção, Ollama como piso; Gemini,
-  GPT-OSS e Claude como premium opt-in via pontes host-side). Inclui um dashboard de status
+  escada de tiers de qualidade que só desce (Groq em produção, Ollama como piso; modelos da
+  OpenAI via Codex e Claude como premium opt-in via pontes host-side). Inclui um dashboard de status
   admin read-only (saúde por tier, métricas e últimas requisições) e log de requisições
   durável para análise de uso. Os provedores reais ficam ocultos da API cliente (model:"gateway").
 developer: BMFERNANDES
@@ -33,8 +33,7 @@ releaseNotes: >-
   GPT-6.1 Terra) por uma ponte nova, ligada à assinatura ChatGPT Plus. A ordem de queda
   entre níveis continua exatamente a mesma; o que muda são os tempos de espera, bem maiores,
   porque esses modelos pensam mais antes de responder. O painel de status passa a mostrar a
-  situação do login dessa nova ponte. A ponte antiga continua instalada por enquanto e sai
-  numa versão seguinte.
+  situação do login dessa nova ponte. A ponte antiga (do Gemini e do GPT-OSS) sai do app.
   v0.23.1 — os nomes dos containers do app passam a ser fixos no padrão do próprio Umbrel
   (antes mudavam conforme quem escreveu a configuração por último, o que quebrava o
   script que renova a credencial do Claude no tier de maior qualidade). O script de
@@ -150,7 +149,7 @@ releaseNotes: >-
   GATEWAY_SECRETS/GROQ_API_KEY/tokens de ponte direto pela UI no 1º acesso, sem precisar de
   variáveis de ambiente (o instalador do Umbrel não tem esse formulário). 1º acesso cria a conta
   de administrador; acessos seguintes exigem usuário/senha.
-# Ollama (server, tier low) e as pontes agy/claude seguem host-side, alcançados por
+# Ollama (server, tier low) e as pontes claude/codex seguem host-side, alcançados por
 # Tailscale / rede do compose — não são apps do Umbrel. TASK_V36 (tier floor, fallback
 # CPU): reaproveita o app "ollama" já instalado via Umbrel App Store (ollama_ollama_1,
 # rede umbrel_main_network) — não é uma dependência de instalação (o app funciona sem
