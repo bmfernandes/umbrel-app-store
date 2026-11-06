@@ -22,7 +22,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit@sha256:eba30f00ce0dcb890bd0129a3b5afc706fc68fdad6b73c40a71086f447b8161e
+    image: 127.0.0.1:8801/dev-audit:v1.5.0@sha256:cfe9ccc39bab2398753551e2d6c30beb98c14f57f9a46998843302e8a479faa4
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -61,6 +61,9 @@ services:
       # Teto de caracteres do prompt final de cada chamada ao Gateway (TASK_V05, emenda 2026-10-24): pacote maior que
       # isto é dividido antes do envio. O Gateway responde 503 acima de cerca de 25 mil.
       - AUDIT_TETO_CARACTERES_PACOTE=${AUDIT_TETO_CARACTERES_PACOTE:-20000}
+      # Tier com que o ciclo começa (emenda V05-2026-11-05): `low` (padrão) ou `floor` para
+      # pular direto ao fallback quando o tier `low` está degradado de forma persistente.
+      - AUDIT_TRIAGEM_TIER_INICIAL=floor
     volumes:
       # --- Inventário e mirrors de leitura (dentro do app-data: re-clonável) ---
       # PRÉ-REQUISITO DE HOST: precisa existir com grupo `root` (GID 0) e `0775` — `git
@@ -93,7 +96,7 @@ services:
   # como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada). O relatório e o
   # mirror entram somente leitura (V04 A-3); só o `cadastro` é gravável.
   ui:
-    image: 127.0.0.1:8801/dev-audit@sha256:eba30f00ce0dcb890bd0129a3b5afc706fc68fdad6b73c40a71086f447b8161e
+    image: 127.0.0.1:8801/dev-audit:v1.5.0@sha256:cfe9ccc39bab2398753551e2d6c30beb98c14f57f9a46998843302e8a479faa4
     entrypoint:
       - python3
       - -m
@@ -156,7 +159,7 @@ services:
   deploy_privs_bootstrap:
     # fixação por digest é especialmente relevante aqui: sem ela, quem publica esta tag
     # determina o conteúdo de /etc/sudoers.d/ do host na próxima subida.
-    image: 127.0.0.1:8801/dev-audit-net-bootstrap-deploy-privs@sha256:88897b11f562421bc677fed02d600da03c6a91872e505dab5b1b4c3bc81b04b2
+    image: 127.0.0.1:8801/dev-audit-net-bootstrap-deploy-privs:v1.5.0@sha256:bac5c835839e6d6ebede6b87c5faa375dbc31edb5bd336559421a30249f6a5a6
     cap_drop:
       - ALL
     security_opt:
