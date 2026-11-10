@@ -174,8 +174,8 @@ services:
   # subida automaticamente pelo umbreld), a recuperação pós-reboot passa a ser autônoma.
   claude_bridge:
     container_name: bmfernandes-llm-gateway_claude_bridge_1
-    # tag: llm-gateway-bridges:v0.21.4 (imagem compartilhada das pontes, TASK_V27)
-    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:8e89d51f619ce7317d2323ecabeebdda479dc2108f7ef79e2843e03a25313b14
+    # tag: llm-gateway-bridges:v0.24.0 (imagem compartilhada das pontes, TASK_V27; CA-14 da V51)
+    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:05aae986668e96f8b2119a037287dab81e844be0eba2918f306a1819404f6d2b
     command: ["uvicorn", "claude_bridge:app", "--host", "0.0.0.0", "--port", "8803"]
     # uvicorn como PID 1 nao reaproveita (reap) zumbis dos subprocessos claude; `init: true`
     # usa o tini do Docker como PID 1 real.
