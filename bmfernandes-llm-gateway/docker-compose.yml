@@ -234,9 +234,9 @@ services:
   # `$CODEX_HOME/packages/standalone`.
   codex_bridge:
     container_name: bmfernandes-llm-gateway_codex_bridge_1
-    # tag: llm-gateway-bridges:v0.24.0 (traz a codex_bridge.py; claude_bridge fica na imagem
-    # v0.21.4 -- nao recriar o que nao mudou)
-    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:05aae986668e96f8b2119a037287dab81e844be0eba2918f306a1819404f6d2b
+    # tag: llm-gateway-bridges:v0.24.0 (traz a codex_bridge.py; a claude_bridge so e recriada
+    # quando o codigo dela muda -- nao recriar o que nao mudou)
+    image: 127.0.0.1:8801/llm-gateway-bridges@sha256:32f0e19aa8084ecb84e53273204c29a02fbc6533b72b4415f796c379fc76011a
     command: ["uvicorn", "codex_bridge:app", "--host", "0.0.0.0", "--port", "8804"]
     # init: true evita zumbis dos subprocessos codex (mesma razao das outras pontes).
     init: true
