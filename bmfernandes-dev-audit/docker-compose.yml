@@ -22,7 +22,7 @@ services:
     # `~/umbrel/app-data/<app_id>/` e NÃO tem o código-fonte/Dockerfile, então `build:`
     # local não é o fluxo natural do Umbrel (build local, pra teste, é
     # `docker build -f umbrel/Dockerfile .` manual).
-    image: 127.0.0.1:8801/dev-audit:v1.5.2@sha256:1c92c7708095f1b47bf11181a002a5e62dcebc40108e44d57bf3dfee50250898
+    image: 127.0.0.1:8801/dev-audit:v1.6.0@sha256:aeddaf1648c161065b06aa69064f1dc554a7600b0182a5ea64d6691dfa623adb
     # Sobrevive a reboot/crash sem intervenção manual — o agendamento de verdade (próximo
     # horário + jitter) é interno ao próprio processo (app_runner.py), não deste restart
     # policy, que só cobre "o container caiu, suba de novo".
@@ -51,8 +51,8 @@ services:
     environment:
       - AUDIT_GATEWAY_URL=${AUDIT_GATEWAY_URL:-http://bmfernandes-llm-gateway_web_1:8800}
       - NTFY_TOPIC=${NTFY_TOPIC:-bmfernandes-auditoria}
-      # O runner itera os projetos de /app/projetos.yml (dentro da imagem) e roda o pipeline
-      # D0-D6 (TASK_V05). Nada de um projeto específico no compose.
+      # O runner lê os projetos de cadastro.json (volume /app/cadastro) e roda o pipeline
+      # D0-D6 (TASK_V05/V08). Nada de um projeto específico no compose.
       - AUDIT_MIRROR_BASE_DIR=/app/projetos
       - AUDIT_REPORT_BASE_DIR=/audit-reports
       # Parametrização da cadência (variável que o código já lê): 600 s de espera depois de cada
@@ -70,10 +70,8 @@ services:
       # fetch`/`merge` escreve dentro de `.git/` do mirror. Aplicado pelo wrapper
       # `bmfernandes-dev-audit-fix-perms.sh` (umbrel/net-bootstrap/deploy-privs/).
       - ${APP_DATA_DIR}/projetos:/app/projetos
-      # Deploy keys de leitura, uma por projeto inscrito — read-only, nunca escrita
-      # (nenhuma credencial de escrita existe do lado Beelink).
-      - ${APP_DATA_DIR}/deploy-keys:/app/deploy-keys:ro
-      # Cadastro (credencial do Gateway), somente leitura: pasta real do host, que sobrevive à
+      # Cadastro (credencial do Gateway e inventário de projetos — V08 Fatia 2), somente leitura:
+      # pasta real do host, que sobrevive à
       # recriação do container. PRÉ-REQUISITO DE HOST: a pasta é criada antes, dono `umbrel`,
       # modo 0700, com o `cadastro.json` em 0600 (se o Docker a criar, nasce `root:root`).
       - ${APP_DATA_DIR}/cadastro:/app/cadastro:ro
@@ -96,7 +94,7 @@ services:
   # como o `runner` e o `web` do llm-gateway (decisão P3: rede compartilhada). O relatório e o
   # mirror entram somente leitura (V04 A-3); só o `cadastro` é gravável.
   ui:
-    image: 127.0.0.1:8801/dev-audit:v1.5.2@sha256:1c92c7708095f1b47bf11181a002a5e62dcebc40108e44d57bf3dfee50250898
+    image: 127.0.0.1:8801/dev-audit:v1.6.0@sha256:aeddaf1648c161065b06aa69064f1dc554a7600b0182a5ea64d6691dfa623adb
     entrypoint:
       - python3
       - -m

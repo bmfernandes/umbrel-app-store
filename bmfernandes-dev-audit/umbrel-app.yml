@@ -7,7 +7,7 @@ name: DEV Audit
 tagline: Verificação contínua de fidelidade task↔código
 icon: https://raw.githubusercontent.com/bmfernandes/umbrel-app-store/main/bmfernandes-dev-audit/icon.svg
 category: Developer Tools
-version: "1.5.2"
+version: "1.6.0"
 # Porta do serviço `ui` (TASK_V04): a próxima da série 80xx de UI apps da frota (8004 é o
 # llm-gateway), por decisão do usuário. O manifesto do app `fizzy` da loja oficial também declara
 # 8005, mas ele não está instalado neste Umbrel (o llm-gateway já convive assim com a 8004).
@@ -27,6 +27,7 @@ repo: https://github.com/bmfernandes/dev-audit
 support: https://github.com/bmfernandes/dev-audit/issues
 gallery: []
 releaseNotes: >-
+  v1.6.0 — inventário de projetos migra de projetos.yml (dentro da imagem) para cadastro.json (volume /app/cadastro), permitindo adicionar projetos sem rebuild; deploy key armazenada como conteúdo no cadastro e escrita como arquivo temporário 0600 em /tmp (nunca em disco persistente); SSH passa a usar StrictHostKeyChecking=yes com known_hosts fixo do GitHub (B-5-bis: três tipos de chave); erro 401 do Gateway (credencial inválida) tratado explicitamente em vez de cair no except genérico. Runner e ui são recriados.
   v1.5.2 — aumenta timeout do cliente para tier low de 200s para 420s (margem para cascata server-side completar com low down); _retentar_em_floor não tenta mais chamar floor diretamente (422 tier_reservado). Runner e ui são recriados.
   v1.5.1 — triagem passa a usar cascata server-side (low→floor): remove cascade=false, o servidor tenta low e, se indisponível, desce para floor automaticamente. Tier inicial revertido para low. Runner e ui são recriados.
   v1.4.0 — o pipeline passa a tratar cada commit individualmente: merges são percorridos commit a commit (sem contar o merge em si), e commits diretos na main são auditados sem depender de merge. Commits maiores que o teto de caracteres do pacote são divididos automaticamente; recusa 413 ou 503 do Gateway dispara nova divisão com mais partes (rede de segurança). Commits sem task citada herdam as tasks do merge. A telemetria passa a registrar `commits_encontrados` e `commits_processados`; o dashboard exibe a coluna Processados com histórico misto (antes da 1.4.0 um merge contava como 1). Runner e `ui` são recriados.
